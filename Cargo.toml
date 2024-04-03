@@ -6,4 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libp2p = "0.53.2"
+clap = { version = "4.5.4", features = ["derive"] }
+libp2p = { version = "0.53.2", features = ["full"] }
+sled = "0.34.7"
+tokio = { version = "1.37.0", features = ["full"] }
+tracing = { version = "0.1.40", features = ["log"] }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
