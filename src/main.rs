@@ -1,10 +1,9 @@
 use libp2p::{identity, PeerId};
-use tracing::{info, debug, error};
-use tracing_subscriber::fmt;
-pub mod db;
-pub mod client;
-pub mod peer;
+use tracing::{info};
 
+pub mod client;
+pub mod db;
+pub mod peer;
 
 #[tokio::main]
 async fn main() {
