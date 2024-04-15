@@ -1,22 +1,24 @@
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 use libp2p::core::Multiaddr;
 
 
 use libp2p::PeerId;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::error::Error;
 use tokio::sync::oneshot::{Sender};
 
 use std::collections::{HashSet};
 #[derive(Parser, Debug)]
+#[command(version, author, about)]
 pub struct Args {
     #[arg(long)]
     pub host: String,
     #[arg(long)]
     pub ip: String,
     pub port: u16,
-    #[arg(value_enum)]
-    pub mode: Mode,
+    #[command(subcommand)]
+    pub cmd: Command,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -29,23 +31,30 @@ pub enum Mode {
     TrackingMode,
 }
 
+#[derive(Subcommand, Debug)]
 pub enum Command {
+    DecodeCommand {
+        val: String,
+    },
+    TorrentInfoCommand{
+        torrent: PathBuf,
+    },
     ListenCommand {
         addr: Multiaddr,
     },
     DialCommand {
         peer_id: PeerId,
+        torrent: PathBuf,
         addr: Multiaddr,
-        tx: Sender<Result<(), Box<dyn Error + Send>>>,
     },
     GetPeersCommand {
-        file_name: String,
-        tx: Sender<HashSet<PeerId>>,
+        torrent: PathBuf,
     },
     GetFileCommand {
-        file_name: String,
+        #[arg(short)]
+        output: PathBuf,
+        torrent: PathBuf,
         peer: PeerId,
-        tx: Sender<Result<Vec<u8>, Box<dyn Error + Send>>>,
     },
 }
 

@@ -4,24 +4,48 @@ use tracing::info;
 
 pub fn cli() {
     let cli = Args::parse();
-    match cli.mode {
-        Mode::ServerMode => {
-            info!("Server mode selected");
+    match cli.cmd {
+        Command::DecodeCommand { val } => {
+            info!("Decode value: {}", val);
         }
-        Mode::ClientMode => {
-            info!("Client mode selected");
+        Command::TorrentInfoCommand { torrent } => {
+            info!("Torrent info on torrent: {:?}", torrent);
         }
-        Mode::DiscoveryMode => {
-            info!("Discovery mode selected");
+        Command::DialCommand { peer_id, torrent, addr } => {
+            info!(
+            "Dialing... peer_id: {}, torrent: {:?}, addr: {}",
+            peer_id, torrent, addr
+            );
         }
-        Mode::TrackingMode => {
-            info!("Tracking mode selected");
+        Command::ListenCommand { addr } => {
+            info!("listening on adddr: {}", addr);
         }
-        Mode::StreamingMode => {
-            info!("Streaming mode selected");
+        Command::GetFileCommand { output, torrent, peer } => {
+            info!(
+            "Get file command selected with output: {:?}, torrent: {:?}, peer: {}",
+            output, torrent, peer
+            );
         }
-        Mode::UploadingMode => {
-            info!("Uploading mode selected");
+        Command::GetPeersCommand { torrent } => {
+            info!("Get peers command selected with torrent: {:?}", torrent);
         }
+        // Mode::ServerMode => {
+        //     info!("Server mode selected");
+        // }
+        // Mode::ClientMode => {
+        //     info!("Client mode selected");
+        // }
+        // Mode::DiscoveryMode => {
+        //     info!("Discovery mode selected");
+        // }
+        // Mode::TrackingMode => {
+        //     info!("Tracking mode selected");
+        // }
+        // Mode::StreamingMode => {
+        //     info!("Streaming mode selected");
+        // }
+        // Mode::UploadingMode => {
+        //     info!("Uploading mode selected");
+        // }
     }
 }
