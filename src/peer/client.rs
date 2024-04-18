@@ -9,8 +9,33 @@ use crate::parser::TorrentFile;
 use crate::types::{Event,Node};
 pub struct Client {
     pub tx: Sender<Command>,
+
 }
 
+#[repr(C)]
+pub struct Handshake {
+    pub len: u8,
+    pub bittorent: [u8; 19],
+    pub reserved: [u8; 8],
+    pub info_hash: [u8; 20],
+    pub peer_id: [u8; 20],
+}
+
+impl Handshake {
+    pub fn new(info_hash: [u8; 20], peer_id: [u8; 20]) -> Self {
+        Handshake {
+            len: 19,
+            bittorent: *b"BitTorrent protocol",
+            reserved: [0; 8],
+            info_hash,
+            peer_id,
+        }
+    }
+
+    pub fn as_bytes_mut(&mut self) -> &mut [u8] {
+        unimplemented!()
+    }
+}
 
 impl Node for Client {
     fn get_peer_id(&self) -> u32 {
@@ -56,6 +81,9 @@ impl Client {
         let res = json::Value::String(val.to_string());
         (res, serialized)
     }
+
+
+
 
     // pub async fn build_tracker(&self, port: u16, file: crate::parser::File) -> Result<String, Box<dyn Error>> {
     //     let id = self.get_peer_id();

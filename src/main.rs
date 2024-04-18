@@ -2,6 +2,7 @@ use libp2p::{identity, PeerId};
 use tracing::{info};
 
 pub mod client;
+pub mod config;
 pub mod db;
 pub mod parser;
 pub mod peer;
