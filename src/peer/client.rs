@@ -1,15 +1,13 @@
-use libp2p::futures::Stream;
-use libp2p::{StreamProtocol, Swarm};
-use tokio::sync::mpsc::{Sender, Receiver};
-use std::error::Error;
-use serde_json as json;
-use serde_bencode as bencode;
 use crate::client::arguments::Command;
-use crate::parser::TorrentFile;
-use crate::types::{Event,Node};
+use crate::types::Node;
+use crate::types::Torrent;
+use serde_bencode as bencode;
+use serde_json as json;
+use std::error::Error;
+use std::path::PathBuf;
+use tokio::sync::mpsc::Sender;
 pub struct Client {
     pub tx: Sender<Command>,
-
 }
 
 #[repr(C)]
@@ -41,56 +39,60 @@ impl Node for Client {
     fn get_peer_id(&self) -> u32 {
         unimplemented!()
     }
-        
 }
 
 impl Client {
     async fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>> {
         match command {
-            Command::DecodeCommand { val } => {
+            Command::DecodeCommand { val: _ } => {
                 unimplemented!()
             }
-            Command::TorrentInfoCommand { torrent } => {
+            Command::TorrentInfoCommand { torrent: _ } => {
                 unimplemented!()
             }
-            Command::GetFileCommand{output, torrent, peer,} => {
+            Command::GetFileCommand {
+                output: _,
+                torrent: _,
+                peer: _,
+            } => {
                 unimplemented!()
             }
-            Command::GetPeersCommand { torrent}  => {
+            Command::GetPeersCommand { torrent: _ } => {
                 unimplemented!()
             }
-            Command::DialCommand { peer_id, torrent, addr, } => {
+            Command::DialCommand {
+                peer_id: _,
+                torrent: _,
+                addr: _,
+            } => {
                 unimplemented!()
             }
-            Command::ListenCommand { addr } => {
+            Command::ListenCommand { addr: _ } => {
                 unimplemented!()
             }
-
         }
     }
     // pub async fn new(seed: Option<u8>) -> Result<(Client, impl Stream<Item = Event> ,Session), Box<dyn Error>> {
     //     unimplemented!()
     // }
-    pub async fn get_file(&self, file: String) -> Result<(), Box<dyn Error>> {
-        let id = self.get_peer_id();
+    pub async fn get_file(&self, _file: String) -> Result<(), Box<dyn Error>> {
+        let _id = self.get_peer_id();
         Ok(())
     }
 
     pub fn decode_value(val: String) -> (json::Value, String) {
-        let serialized  = bencode::to_string(&val).unwrap();
+        let serialized = bencode::to_string(&val).unwrap();
         let res = json::Value::String(val.to_string());
         (res, serialized)
     }
 
-
-
-
-    // pub async fn build_tracker(&self, port: u16, file: crate::parser::File) -> Result<String, Box<dyn Error>> {
-    //     let id = self.get_peer_id();
-    //     unimplemented!()
-    // }
+    pub fn decode_file(_file: PathBuf) -> (Torrent, String) {
+        unimplemented!()
+        // let file = std::fs::read_to_string(file)?;
+        // let file = bencode::from_str(&file)?;
+        // Ok(file)
+    }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -101,7 +103,9 @@ mod tests {
     #[traced_test]
     fn test_decode_value() {
         let (val, serialized) = Client::decode_value("d4:spam3:egge".to_string());
-        info!("decoded bencode val: {:?}, serialized: {:?}", val, serialized);
-            
+        info!(
+            "decoded bencode val: {:?}, serialized: {:?}",
+            val, serialized
+        );
     }
 }

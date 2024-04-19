@@ -1,14 +1,10 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use libp2p::core::Multiaddr;
 
-
 use libp2p::PeerId;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::error::Error;
-use tokio::sync::oneshot::{Sender};
 
-use std::collections::{HashSet};
 #[derive(Parser, Debug)]
 #[command(version, author, about)]
 pub struct Args {
@@ -36,7 +32,7 @@ pub enum Command {
     DecodeCommand {
         val: String,
     },
-    TorrentInfoCommand{
+    TorrentInfoCommand {
         torrent: PathBuf,
     },
     ListenCommand {
