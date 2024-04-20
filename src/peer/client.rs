@@ -1,11 +1,15 @@
 use crate::client::arguments::Command;
 use crate::types::Node;
 use crate::types::Torrent;
+use libp2p::Multiaddr;
+use libp2p::PeerId;
 use serde_bencode as bencode;
 use serde_json as json;
+use std::collections::{hash_map, HashMap, HashSet};
 use std::error::Error;
 use std::path::PathBuf;
 use tokio::sync::mpsc::Sender;
+#[derive(Clone)]
 pub struct Client {
     pub tx: Sender<Command>,
 }
@@ -91,6 +95,35 @@ impl Client {
         // let file = std::fs::read_to_string(file)?;
         // let file = bencode::from_str(&file)?;
         // Ok(file)
+    }
+
+    async fn dial(
+        &mut self,
+        addr: Multiaddr,
+        peer_id: PeerId,
+        torrent: &str,
+    ) -> Result<(), Box<dyn Error + Send>> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        self.tx
+            .send(Command::DialCommand {
+                peer_id,
+                torrent: PathBuf::from(torrent),
+                addr,
+            })
+            .await
+            .expect("Receiver not dropped yet...");
+        rx.await.expect("Sender not dropped yet...")
+    }
+
+    async fn get_peers(&mut self, file: String) -> HashSet<PeerId> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        self.tx
+            .send(Command::GetPeersCommand {
+                torrent: PathBuf::from(file),
+            })
+            .await
+            .expect("Receiver not dropped yet...");
+        rx.await.expect("Sender not dropped yet...")
     }
 }
 

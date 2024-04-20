@@ -1,12 +1,16 @@
 use crate::client::arguments::Command;
 use async_trait::async_trait;
 // use url::{Url, ParseError};
-use libp2p::PeerId;
+use libp2p::{
+    core::Multiaddr,
+    request_response::json::Behaviour,
+    swarm::{NetworkBehaviour, Swarm, SwarmEvent},
+    PeerId,
+};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tokio::sync::mpsc::{Receiver, Sender};
-
 pub trait Node {
     fn get_peer_id(&self) -> u32;
 }
@@ -15,6 +19,7 @@ pub enum Event {}
 
 pub struct Session {
     // swarm: Swarm<>,
+    // swarm: Swarm<Behaviour>,
     cmd_rx: Receiver<Command>,
     event_tx: Sender<Event>,
 }
@@ -93,6 +98,11 @@ impl File {
         unimplemented!()
     }
     async fn build_tracker_URL(&self, peer_id: PeerId, port: u16) -> Result<Url, Box<dyn Error>> {
+        // let mut opt_info_hash = None;
+        // let mut opt_peer_id = None;
+        // let mut opt_port = None;
+        // let mut opt_bytes_left = None;
+
         let mut url = Url::parse(self.announce.as_ref().unwrap().as_str())?;
         // let params = [
         //     ("info_hash", self.info_hash),
@@ -112,15 +122,28 @@ impl File {
         Ok(url)
     }
 
+    // async fn request_peers(&self, peer_id: PeerId, port: u16, peer_addr: Multiaddr) -> Result<(), Box<dyn Error>> {
+    //     use tokio::sync::oneshot;
+    //     let url = self.build_tracker_URL(peer_id, port).await?;
+    //     let (tx, rx) = oneshot::channel();
+
+    //     let client = reqwest::Client::new();
+
+    //     unimplemented!()
+    // }
+
     async fn check_piece(&self, _index: u64) -> Result<bool, Box<dyn Error>> {
         unimplemented!()
     }
 }
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct TorrentRequest {}
+#[derive(Deserialize, Serialize, Debug)]
+pub struct TorrentResponse {}
 mod tests {
-use super::*;    
-use tracing::info;
-    
-    
+    use super::*;
+    use tracing::info;
 
     #[tokio::test]
     async fn test_tracker_URL() {
