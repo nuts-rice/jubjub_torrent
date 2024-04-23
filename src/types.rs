@@ -1,21 +1,24 @@
-use crate::client::arguments::Command;
 use async_trait::async_trait;
 // use url::{Url, ParseError};
 use libp2p::{
-    core::Multiaddr,
-    request_response::json::Behaviour,
-    swarm::{NetworkBehaviour, Swarm, SwarmEvent},
+    request_response::{ResponseChannel},
     PeerId,
 };
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
-use tokio::sync::mpsc::{Receiver, Sender};
+use std::{collections::HashSet, error::Error};
+
+
 pub trait Node {
     fn get_peer_id(&self) -> u32;
 }
-
-pub enum Event {}
+#[derive(Debug)]
+pub(crate) enum Event {
+    InboundRequest {
+        request: String,
+        channel: ResponseChannel<TorrentResponse>,
+    },
+}
 
 pub struct Torrent {
     announce: Option<String>,
@@ -131,12 +134,18 @@ impl File {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct TorrentRequest {}
+pub(crate) struct TorrentRequest(pub String);
 #[derive(Deserialize, Serialize, Debug)]
-pub struct TorrentResponse {}
+pub(crate) struct TorrentResponse(pub Vec<u8>);
+
+#[derive(Deserialize, Serialize, Debug)]
+pub(crate) struct PieceRequest(pub String);
+#[derive(Deserialize, Serialize, Debug)]
+pub(crate) struct PieceResponse(pub Vec<HashSet<String>>);
+
 mod tests {
-    use super::*;
-    use tracing::info;
+use super::*;    
+    
 
     #[tokio::test]
     async fn test_tracker_URL() {

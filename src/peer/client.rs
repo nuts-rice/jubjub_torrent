@@ -5,7 +5,7 @@ use libp2p::Multiaddr;
 use libp2p::PeerId;
 use serde_bencode as bencode;
 use serde_json as json;
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::{HashSet};
 use std::error::Error;
 use std::path::PathBuf;
 use tokio::sync::mpsc::Sender;
@@ -103,7 +103,7 @@ impl Client {
         peer_id: PeerId,
         torrent: &str,
     ) -> Result<(), Box<dyn Error + Send>> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
+        let (_tx, rx) = tokio::sync::oneshot::channel();
         self.tx
             .send(Command::DialCommand {
                 peer_id,
@@ -116,7 +116,7 @@ impl Client {
     }
 
     async fn get_peers(&mut self, file: String) -> HashSet<PeerId> {
-        let (tx, rx) = tokio::sync::oneshot::channel();
+        let (_tx, rx) = tokio::sync::oneshot::channel();
         self.tx
             .send(Command::GetPeersCommand {
                 torrent: PathBuf::from(file),
