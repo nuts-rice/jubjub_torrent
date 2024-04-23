@@ -17,13 +17,6 @@ pub trait Node {
 
 pub enum Event {}
 
-pub struct Session {
-    // swarm: Swarm<>,
-    // swarm: Swarm<Behaviour>,
-    cmd_rx: Receiver<Command>,
-    event_tx: Sender<Event>,
-}
-
 pub struct Torrent {
     announce: Option<String>,
     pub info_hash: Vec<u8>,
