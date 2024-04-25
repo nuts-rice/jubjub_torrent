@@ -29,7 +29,6 @@ async fn main() {
     // loop {
     //     match
 
-    unimplemented!()
 }
 
 fn setup_tracing() -> Result<(), Box<dyn Error>> {

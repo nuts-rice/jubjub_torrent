@@ -1,8 +1,8 @@
 use crate::client::arguments::Command;
 use crate::types::Node;
 use crate::types::Torrent;
-use futures::channel::{mpsc, oneshot};
-use futures::SinkExt;
+use libp2p::futures::channel::{mpsc, oneshot};
+use ::futures::SinkExt;
 use libp2p::Multiaddr;
 use libp2p::PeerId;
 use serde_bencode as bencode;
@@ -62,19 +62,24 @@ impl Client {
             } => {
                 unimplemented!()
             }
-            Command::GetPeersCommand { torrent: _ } => {
+            Command::GetPeersCommand { torrent: _ , .. } => {
                 unimplemented!()
             }
             Command::DialCommand {
                 peer_id: _,
                 torrent: _,
                 addr: _,
+                ..
             } => {
                 unimplemented!()
             }
             Command::ListenCommand { addr: _ } => {
                 unimplemented!()
             }
+            Command::ProvideTorrent { file, channel } => {
+                unimplemented!()
+            }
+                    
         }
     }
     // pub async fn new(seed: Option<u8>) -> Result<(Client, impl Stream<Item = Event> ,Session), Box<dyn Error>> {
@@ -104,22 +109,24 @@ impl Client {
         peer_id: PeerId,
         torrent: &str,
     ) -> Result<(), Box<dyn Error + Send>> {
-        let (tx, rx) = oneshot::channel();
+        let (_tx, rx) = oneshot::channel();
         self.tx
             .send(Command::DialCommand {
                 peer_id,
                 torrent: PathBuf::from(torrent),
                 addr,
+                tx: _tx,
             })
             .await
             .expect("Receiver not dropped yet...");
         rx.await.expect("Sender not dropped yet...")
     }
 
-    async fn get_peers(&mut self, file: String) -> HashSet<PeerId> {
-        let (_tx, rx) = tokio::sync::oneshot::channel();
+    async fn get_peers(&mut self, file: String) -> hashbrown::HashSet<PeerId> {
+        let (tx, rx) = oneshot::channel();
         self.tx
             .send(Command::GetPeersCommand {
+                tx,
                 torrent: PathBuf::from(file),
             })
             .await

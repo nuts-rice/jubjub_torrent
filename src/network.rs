@@ -244,7 +244,9 @@ impl Session {
     // unimplemented!()
     // match command {}
 }
+pub fn fetch_providers() {}
 
+pub type FetchProvidersResult = Result<ProviderResult, ProviderError>;
 //override provider result
 #[derive(Debug, Clone)]
 pub enum ProviderResult {
@@ -255,6 +257,14 @@ pub enum ProviderResult {
     NoNewProviders {
         closest_peers: Vec<PeerId>,
     },
+}
+#[derive(Debug, Clone)]
+pub enum ProviderError {}
+
+
+
+fn provider_result(){
+
 }
 
 pub(crate) async fn metrics_server(registry: Registry) -> Result<(), std::io::Error> {

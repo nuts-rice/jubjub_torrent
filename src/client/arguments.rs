@@ -1,10 +1,12 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use libp2p::core::Multiaddr;
+use libp2p::{core::Multiaddr, request_response::ResponseChannel};
 
 use libp2p::PeerId;
 use serde::{Deserialize, Serialize};
 
 use std::path::PathBuf;
+
+use crate::types::TorrentResponse;
 
 #[derive(Parser, Debug)]
 #[command(version, author, about)]
@@ -14,8 +16,9 @@ pub struct Args {
     #[arg(long)]
     pub ip: String,
     pub port: u16,
-    #[command(subcommand)]
-    pub cmd: Command,
+    //TODO: move commands somewhere else
+    // #[command(subcommand)]
+    // pub cmd: Command,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -28,7 +31,7 @@ pub enum Mode {
     TrackingMode,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive( Debug)]
 pub enum Command {
     DecodeCommand {
         val: String,
@@ -44,12 +47,17 @@ pub enum Command {
         peer_id: PeerId,
         torrent: PathBuf,
         addr: Multiaddr,
+        tx: futures::channel::oneshot::Sender<Result<(), Box<dyn std::error::Error + Send >>>
     },
     GetPeersCommand {
         torrent: PathBuf,
+        tx: futures::channel::oneshot::Sender<hashbrown::HashSet<PeerId>>,
+    },
+    ProvideTorrent {
+        file: Vec<u8>,
+        channel: ResponseChannel<TorrentResponse>
     },
     GetFileCommand {
-        #[arg(short)]
         output: PathBuf,
         torrent: PathBuf,
         peer: PeerId,
