@@ -1,13 +1,9 @@
 use async_trait::async_trait;
 // use url::{Url, ParseError};
-use libp2p::{
-    request_response::{ResponseChannel},
-    PeerId,
-};
+use libp2p::{request_response::ResponseChannel, PeerId};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, error::Error};
-
 
 pub trait Node {
     fn get_peer_id(&self) -> u32;
@@ -144,8 +140,7 @@ pub(crate) struct PieceRequest(pub String);
 pub(crate) struct PieceResponse(pub Vec<HashSet<String>>);
 
 mod tests {
-use super::*;    
-    
+    use super::*;
 
     #[tokio::test]
     async fn test_tracker_URL() {

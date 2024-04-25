@@ -1,17 +1,18 @@
 use crate::client::arguments::Command;
 use crate::types::Node;
 use crate::types::Torrent;
+use futures::channel::{mpsc, oneshot};
+use futures::SinkExt;
 use libp2p::Multiaddr;
 use libp2p::PeerId;
 use serde_bencode as bencode;
 use serde_json as json;
-use std::collections::{HashSet};
+use std::collections::HashSet;
 use std::error::Error;
 use std::path::PathBuf;
-use tokio::sync::mpsc::Sender;
 #[derive(Clone)]
 pub struct Client {
-    pub tx: Sender<Command>,
+    pub tx: mpsc::Sender<Command>,
 }
 
 #[repr(C)]
@@ -103,7 +104,7 @@ impl Client {
         peer_id: PeerId,
         torrent: &str,
     ) -> Result<(), Box<dyn Error + Send>> {
-        let (_tx, rx) = tokio::sync::oneshot::channel();
+        let (tx, rx) = oneshot::channel();
         self.tx
             .send(Command::DialCommand {
                 peer_id,

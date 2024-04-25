@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 use std::path::PathBuf;
 
-
 #[derive(Parser, Debug)]
 #[command(version, author, about)]
 pub struct Args {

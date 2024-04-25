@@ -5,17 +5,11 @@ use libp2p::{
     multiaddr::Protocol,
     request_response::{self, OutboundRequestId, ProtocolSupport},
     swarm::{NetworkBehaviour, Swarm, SwarmEvent},
-    tcp,
-    PeerId, SwarmBuilder,
+    tcp, PeerId, SwarmBuilder,
 };
 use tracing::info;
 
 use libp2p::StreamProtocol;
-
-use std::collections::{HashMap, HashSet};
-use std::error::Error;
-use std::time::Duration;
-use tokio::sync::{oneshot};
 
 use crate::client::arguments::Command;
 use crate::types;
@@ -24,8 +18,13 @@ use crate::{
     peer::client::Client,
     types::{TorrentRequest, TorrentResponse},
 };
+use futures::channel::{mpsc, oneshot};
+use futures::prelude::*;
+use std::collections::{HashMap, HashSet};
+use std::error::Error;
+use std::time::Duration;
 
-pub(crate) async fn new() -> Result<Client, Box<dyn Error>> {
+pub(crate) async fn new() -> Result<(Client, impl Stream<Item = Event>, Session), Box<dyn Error>> {
     let identity = identity::Keypair::generate_ed25519();
     let peer_id = identity.public().to_peer_id();
     info!(
@@ -34,7 +33,7 @@ pub(crate) async fn new() -> Result<Client, Box<dyn Error>> {
         identity.public()
     );
     // parser::chi_squared_test(&_bytes, &bytes);
-    let _swarm = SwarmBuilder::with_existing_identity(identity)
+    let swarm = SwarmBuilder::with_existing_identity(identity)
         .with_tokio()
         .with_tcp(
             tcp::Config::default(),
@@ -53,8 +52,14 @@ pub(crate) async fn new() -> Result<Client, Box<dyn Error>> {
         })?
         .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(30)))
         .build();
-    let (command_tx, _command_rx) = tokio::sync::mpsc::channel(10);
-    Ok(Client { tx: command_tx })
+    let (command_tx, command_rx) = mpsc::channel(0);
+    let (event_tx, event_rx) = mpsc::channel(0);
+
+    Ok((
+        Client { tx: command_tx },
+        event_rx,
+        Session::new(swarm, command_rx, event_tx),
+    ))
 }
 
 #[derive(NetworkBehaviour)]
@@ -65,8 +70,8 @@ struct Behaviour {
 
 pub(crate) struct Session {
     swarm: Swarm<Behaviour>,
-    command_rx: tokio::sync::mpsc::Receiver<Command>,
-    event_tx: tokio::sync::mpsc::Sender<types::Event>,
+    command_rx: mpsc::Receiver<Command>,
+    event_tx: mpsc::Sender<types::Event>,
     pending_dial: HashMap<PeerId, oneshot::Sender<Result<(), Box<dyn Error + Send>>>>,
     request_cmd_map: HashMap<OutboundRequestId, Command>,
     provider_query_tx_map: HashMap<kad::QueryId, oneshot::Sender<()>>,
@@ -78,8 +83,8 @@ pub(crate) struct Session {
 impl Session {
     fn new(
         swarm: Swarm<Behaviour>,
-        command_rx: tokio::sync::mpsc::Receiver<Command>,
-        event_tx: tokio::sync::mpsc::Sender<types::Event>,
+        command_rx: mpsc::Receiver<Command>,
+        event_tx: mpsc::Sender<types::Event>,
     ) -> Self {
         Self {
             swarm,
@@ -96,7 +101,7 @@ impl Session {
     pub(crate) async fn run(mut self) {
         loop {
             tokio::select! {
-                Some(command) = self.command_rx.recv() => self.handle_command(command).await,
+                Some(command) = self.command_rx.next() => self.handle_command(command).await,
                 event = self.swarm.select_next_some() => self.handle_event(event).await,
             }
         }
@@ -242,10 +247,17 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[tokio::test]
     async fn test_network() {
-        unimplemented!()
+        let (tx, mut rx) = mpsc::channel(10);
+        let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(10);
+        let (mut network_client, mut network_events, network_session) = new().await.unwrap();
+        tokio::spawn(network_session.run());
+        let command = Command::ListenCommand {
+            addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
+        };
     }
 }
