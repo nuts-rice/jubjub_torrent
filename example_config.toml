@@ -1,0 +1,12 @@
+[peer]
+max_peers = 50
+[tcp]
+port = 3001
+[websocket]
+
+
+[metrics]
+address = "127.0.0.1:90901"
+route = "/metrics"
+update_interval = "5"
+

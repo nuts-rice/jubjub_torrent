@@ -1,5 +1,6 @@
 use futures::prelude::*;
 use futures::StreamExt;
+use libp2p::metrics::Registry;
 use libp2p::{
     identity, kad,
     multiaddr::Protocol,
@@ -244,7 +245,9 @@ impl Session {
     // unimplemented!()
     // match command {}
 }
-
+pub(crate) async fn metrics_server(registry: Registry) -> Result<(), std::io::Error> {
+    unimplemented!()
+}
 #[cfg(test)]
 mod tests {
 

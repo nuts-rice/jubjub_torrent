@@ -56,6 +56,49 @@ pub enum Command {
     },
 }
 
+pub fn get_cmds() -> clap::Command {
+    use crate::config::VERSION_STR;
+    use clap::{Arg, Command};
+    Command::new("jubjub")
+        .version(VERSION_STR)
+        .author("nuts-rice and contributors")
+        .about("bbyjubjub is a torrent client. Enjoy ^_^")
+        .arg(
+            Arg::new("max_peers")
+                .short('m')
+                .long("max-peers")
+                .num_args(1)
+                .help("Maximum number of peers to connect to")
+                .default_value("10")
+                .conflicts_with("config"),
+        )
+        .arg(
+            Arg::new("config")
+                .long("config")
+                .short('c')
+                .num_args(1..)
+                .default_value("config.toml")
+                .conflicts_with("max_peers")
+                .help("TOML config file for jubjub"),
+        )
+        .arg(
+            Arg::new("address")
+                .long("address")
+                .short('a')
+                .num_args(1..)
+                .default_value("127.0.0.1")
+                .help("address to listen to"),
+        )
+        .arg(
+            Arg::new("port")
+                .long("address")
+                .short('a')
+                .num_args(1..)
+                .default_value("3001")
+                .help("port to listen to"),
+        )
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct FileRequest(String);
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
