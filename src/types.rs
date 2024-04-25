@@ -141,7 +141,8 @@ pub(crate) struct PieceResponse(pub Vec<HashSet<String>>);
 
 mod tests {
     use super::*;
-
+use tracing::info;
+    
     #[tokio::test]
     async fn test_tracker_URL() {
         let peer_id = PeerId::random();

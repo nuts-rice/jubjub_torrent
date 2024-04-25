@@ -1,6 +1,8 @@
 use futures::prelude::*;
 use futures::StreamExt;
+use hashbrown::HashMap;
 use libp2p::metrics::Registry;
+use libp2p::StreamProtocol;
 use libp2p::{
     identity, kad,
     multiaddr::Protocol,
@@ -9,8 +11,6 @@ use libp2p::{
     tcp, PeerId, SwarmBuilder,
 };
 use tracing::info;
-
-use libp2p::StreamProtocol;
 
 use crate::client::arguments::Command;
 use crate::types;
@@ -21,7 +21,6 @@ use crate::{
 };
 use futures::channel::{mpsc, oneshot};
 use futures::prelude::*;
-use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::time::Duration;
 
@@ -78,7 +77,7 @@ pub(crate) struct Session {
     provider_query_tx_map: HashMap<kad::QueryId, oneshot::Sender<()>>,
     request_file_map:
         HashMap<OutboundRequestId, oneshot::Sender<Result<Vec<u8>, Box<dyn Error + Send>>>>,
-    query_peer_map: HashMap<kad::QueryId, oneshot::Sender<HashSet<PeerId>>>,
+    query_peer_map: HashMap<kad::QueryId, oneshot::Sender<std::collections::HashSet<PeerId>>>,
 }
 
 impl Session {
@@ -245,6 +244,19 @@ impl Session {
     // unimplemented!()
     // match command {}
 }
+
+//override provider result
+#[derive(Debug, Clone)]
+pub enum ProviderResult {
+    NewProviders {
+        key: libp2p::kad::RecordKey,
+        providers: hashbrown::HashSet<PeerId>,
+    },
+    NoNewProviders {
+        closest_peers: Vec<PeerId>,
+    },
+}
+
 pub(crate) async fn metrics_server(registry: Registry) -> Result<(), std::io::Error> {
     unimplemented!()
 }
@@ -255,8 +267,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_network() {
-        let (tx, mut rx) = mpsc::channel(10);
-        let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(10);
         let (mut network_client, mut network_events, network_session) = new().await.unwrap();
         tokio::spawn(network_session.run());
         let command = Command::ListenCommand {

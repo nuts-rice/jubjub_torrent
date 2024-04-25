@@ -13,6 +13,9 @@ libfuzzer-sys = "0.4"
 [dependencies.jubjub_torrent]
 path = ".."
 
+[workspace]
+members = ["."]
+
 [[bin]]
 name = "fuzz_target_1"
 path = "fuzz_targets/fuzz_target_1.rs"
