@@ -1,6 +1,7 @@
 use futures::prelude::*;
 use futures::StreamExt;
 use hashbrown::HashMap;
+
 use libp2p::metrics::Registry;
 use libp2p::StreamProtocol;
 use libp2p::{
@@ -20,7 +21,7 @@ use crate::{
     types::{TorrentRequest, TorrentResponse},
 };
 use futures::channel::{mpsc, oneshot};
-use futures::prelude::*;
+
 use std::error::Error;
 use std::time::Duration;
 
@@ -236,7 +237,7 @@ impl Session {
                 unimplemented!()
             }
             Command::GetFileCommand {
-                output,
+                output: _,
                 torrent,
                 peer,
                 tx,
@@ -248,12 +249,17 @@ impl Session {
                     .send_request(&peer, TorrentRequest(torrent));
                 self.request_file_map.insert(request_id, tx);
             }
-            Command::GetPeersCommand { torrent: _, .. } => {
-                unimplemented!()
+            Command::GetPeersCommand { torrent, tx } => {
+                let query_id = self
+                    .swarm
+                    .behaviour_mut()
+                    .kademlia
+                    .get_providers(torrent.into_bytes().into());
+                self.query_peer_map.insert(query_id, tx);
             }
             Command::DialCommand {
                 peer_id,
-                torrent,
+                torrent: _,
                 addr,
                 tx,
             } => {
@@ -280,7 +286,7 @@ impl Session {
                     Err(e) => tx.send(Err(Box::new(e))),
                 };
             }
-            Command::ProvideTorrent { file, channel } => {
+            Command::ProvideTorrent { file: _, channel: _ } => {
                 unimplemented!()
             }
         }
@@ -308,7 +314,7 @@ pub enum ProviderError {}
 
 fn provider_result() {}
 
-pub(crate) async fn metrics_server(registry: Registry) -> Result<(), std::io::Error> {
+pub(crate) async fn metrics_server(_registry: Registry) -> Result<(), std::io::Error> {
     unimplemented!()
 }
 #[cfg(test)]

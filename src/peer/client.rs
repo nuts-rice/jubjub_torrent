@@ -7,7 +7,7 @@ use libp2p::Multiaddr;
 use libp2p::PeerId;
 use serde_bencode as bencode;
 use serde_json as json;
-use std::collections::HashSet;
+
 use std::error::Error;
 use std::path::PathBuf;
 #[derive(Clone)]
@@ -66,10 +66,10 @@ impl Client {
         Ok(())
     }
 
-    pub(crate) async fn execute_command(tx: serde_json::Value) {}
+    pub(crate) async fn execute_command(_tx: serde_json::Value) {}
 
-    pub(crate) async fn start_providing(&mut self, file: PathBuf) {
-        let (tx, rx) = oneshot::channel();
+    pub(crate) async fn start_providing(&mut self, file: String) {
+        let (tx, _rx) = oneshot::channel();
         let bytes = std::fs::read(file.clone()).expect("File not found");
         self.tx
             .send(Command::ProvideTorrent {
@@ -112,13 +112,10 @@ impl Client {
         rx.await.expect("Sender not dropped yet...")
     }
 
-    async fn get_peers(&mut self, file: String) -> hashbrown::HashSet<PeerId> {
+    async fn get_peers(&mut self, file: String) -> std::collections::HashSet<PeerId> {
         let (tx, rx) = oneshot::channel();
         self.tx
-            .send(Command::GetPeersCommand {
-                tx,
-                torrent: PathBuf::from(file),
-            })
+            .send(Command::GetPeersCommand { tx, torrent: file })
             .await
             .expect("Receiver not dropped yet...");
         rx.await.expect("Sender not dropped yet...")

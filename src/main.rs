@@ -5,8 +5,8 @@ pub mod network;
 pub mod parser;
 pub mod peer;
 pub mod types;
-use futures::channel::mpsc;
-use futures::StreamExt;
+
+
 use libp2p::metrics::{Metrics, Registry};
 use opentelemetry::KeyValue;
 use std::error::Error;
@@ -19,14 +19,14 @@ async fn main() {
     setup_tracing().unwrap();
     let mut metrics_registry = Registry::default();
     //moved to network
-    let (mut network_client, mut network_events, network_session) = network::new().await.unwrap();
+    let (_network_client, _network_events, network_session) = network::new().await.unwrap();
     tokio::spawn(network_session.run());
     // let command = crate::client::arguments::Command::ListenCommand {
     //     addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
     //     tx,
 
     // };
-    let metrics = Metrics::new(&mut metrics_registry);
+    let _metrics = Metrics::new(&mut metrics_registry);
     // tokio::spawn(network::metrics_server(metrics_registry));
     // loop {
     //     match

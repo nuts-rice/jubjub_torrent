@@ -1,9 +1,9 @@
 use crate::client::arguments::*;
 use clap::Parser;
-use tracing::info;
+
 
 pub fn cli() {
-    let cli = Args::parse();
+    let _cli = Args::parse();
     // match cli.cmd {
     //     Command::DecodeCommand { val } => {
     //         info!("Decode value: {}", val);

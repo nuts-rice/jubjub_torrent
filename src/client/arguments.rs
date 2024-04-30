@@ -1,13 +1,13 @@
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, ValueEnum};
 use futures::channel::oneshot;
 use libp2p::PeerId;
-use libp2p::{core::Multiaddr, request_response::ResponseChannel};
+use libp2p::{core::Multiaddr};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
 use std::path::PathBuf;
 
-use crate::types::TorrentResponse;
+
 
 #[derive(Parser, Debug)]
 #[command(version, author, about)]
@@ -51,8 +51,8 @@ pub enum Command {
         tx: futures::channel::oneshot::Sender<Result<(), Box<dyn std::error::Error + Send>>>,
     },
     GetPeersCommand {
-        torrent: PathBuf,
-        tx: futures::channel::oneshot::Sender<hashbrown::HashSet<PeerId>>,
+        torrent: String,
+        tx: futures::channel::oneshot::Sender<std::collections::HashSet<PeerId>>,
     },
     ProvideTorrent {
         file: Vec<u8>,

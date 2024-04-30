@@ -32,7 +32,7 @@ pub(crate) struct Torrent {
 
 impl Torrent {
     pub fn new(announce: Option<String>, info_hash: Vec<u8>) -> Self {
-        let (cmd_tx, cmd_rx) = futures::channel::mpsc::channel(10);
+        let (_cmd_tx, cmd_rx) = futures::channel::mpsc::channel(10);
         let listen_addr = "/ip4/".parse().unwrap();
         Self {
             announce,
@@ -178,8 +178,8 @@ impl std::fmt::Display for InfoHash {
 pub enum ChannelRequest {}
 
 mod tests {
-    use super::*;
-    use tracing::info;
+    
+    
 
     #[tokio::test]
     async fn test_tracker_URL() {
