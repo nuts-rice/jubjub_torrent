@@ -1,8 +1,8 @@
 use crate::client::arguments::Command;
 use crate::types::Node;
 use crate::types::Torrent;
-use libp2p::futures::channel::{mpsc, oneshot};
 use ::futures::SinkExt;
+use libp2p::futures::channel::{mpsc, oneshot};
 use libp2p::Multiaddr;
 use libp2p::PeerId;
 use serde_bencode as bencode;
@@ -47,47 +47,37 @@ impl Node for Client {
 }
 
 impl Client {
-    async fn handle_command(&mut self, command: Command) -> Result<(), Box<dyn Error>> {
-        match command {
-            Command::DecodeCommand { val: _ } => {
-                unimplemented!()
-            }
-            Command::TorrentInfoCommand { torrent: _ } => {
-                unimplemented!()
-            }
-            Command::GetFileCommand {
-                output: _,
-                torrent: _,
-                peer: _,
-            } => {
-                unimplemented!()
-            }
-            Command::GetPeersCommand { torrent: _ , .. } => {
-                unimplemented!()
-            }
-            Command::DialCommand {
-                peer_id: _,
-                torrent: _,
-                addr: _,
-                ..
-            } => {
-                unimplemented!()
-            }
-            Command::ListenCommand { addr: _ } => {
-                unimplemented!()
-            }
-            Command::ProvideTorrent { file, channel } => {
-                unimplemented!()
-            }
-                    
-        }
-    }
     // pub async fn new(seed: Option<u8>) -> Result<(Client, impl Stream<Item = Event> ,Session), Box<dyn Error>> {
     //     unimplemented!()
     // }
+    pub(crate) async fn start_listening(
+        &mut self,
+        addr: Multiaddr,
+    ) -> Result<(), Box<dyn Error + Send>> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(Command::ListenCommand { addr, tx })
+            .await
+            .expect("Receiver not dropped yet...");
+        rx.await.expect("Sender not dropped yet...")
+    }
     pub async fn get_file(&self, _file: String) -> Result<(), Box<dyn Error>> {
         let _id = self.get_peer_id();
         Ok(())
+    }
+
+    pub(crate) async fn execute_command(tx: serde_json::Value) {}
+
+    pub(crate) async fn start_providing(&mut self, file: PathBuf) {
+        let (tx, rx) = oneshot::channel();
+        let bytes = std::fs::read(file.clone()).expect("File not found");
+        self.tx
+            .send(Command::ProvideTorrent {
+                file: bytes,
+                channel: tx,
+            })
+            .await
+            .expect("Receiver not dropped yet...");
     }
 
     pub fn decode_value(val: String) -> (json::Value, String) {

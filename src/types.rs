@@ -5,6 +5,8 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, error::Error};
 
+use crate::client::arguments::Command;
+
 pub trait Node {
     fn get_peer_id(&self) -> u32;
 }
@@ -16,16 +18,32 @@ pub(crate) enum Event {
     },
 }
 
-pub struct Torrent {
+pub type SessionId = u32;
+
+pub(crate) struct Torrent {
     announce: Option<String>,
-    pub info_hash: Vec<u8>,
+    pub info_hash: InfoHash,
+    peers: hashbrown::HashMap<PeerId, SessionId>,
+    cmd_rx: futures::channel::mpsc::Receiver<Command>,
+    listen_addr: libp2p::Multiaddr,
+    started: Option<std::time::Instant>,
+    completed: Option<Vec<usize>>,
 }
 
 impl Torrent {
     pub fn new(announce: Option<String>, info_hash: Vec<u8>) -> Self {
+        let (cmd_tx, cmd_rx) = futures::channel::mpsc::channel(10);
+        let listen_addr = "/ip4/".parse().unwrap();
         Self {
             announce,
-            info_hash,
+            info_hash: InfoHash {
+                hash: info_hash.try_into().unwrap(),
+            },
+            peers: hashbrown::HashMap::new(),
+            cmd_rx,
+            listen_addr,
+            started: None,
+            completed: None,
         }
     }
 
@@ -139,10 +157,30 @@ pub(crate) struct PieceRequest(pub String);
 #[derive(Deserialize, Serialize, Debug)]
 pub(crate) struct PieceResponse(pub Vec<HashSet<String>>);
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListRequest {
+    pub info_hashes: Vec<[u8; 20]>,
+}
+
+#[derive(Ord, PartialOrd, PartialEq, Eq, Clone)]
+pub struct InfoHash {
+    hash: [u8; 20],
+}
+
+impl std::fmt::Display for InfoHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let rx: [u8; 20] = serde_bencode::from_bytes(&self.hash).expect("failed to serialize");
+        write!(f, "{:?}", std::str::from_utf8(&rx).unwrap())
+    }
+}
+
+#[derive(Debug)]
+pub enum ChannelRequest {}
+
 mod tests {
     use super::*;
-use tracing::info;
-    
+    use tracing::info;
+
     #[tokio::test]
     async fn test_tracker_URL() {
         let peer_id = PeerId::random();

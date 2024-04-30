@@ -227,20 +227,65 @@ impl Session {
         }
     }
 
-    async fn handle_command(&mut self, _command: Command) {
-        //TODO: need to have tx field in Command
-        // match command {
-        //     Command::ListenCommand { addr,  } => {
-        //         let _ = match self.swarm.listen_on(addr) {
-        //             Ok(_) => Ok(()),
-        //             Err(e) => Err(Box::new(e)),
-        //         };
-        //     }
-        //     Command::DialCommand { peer_id, torrent, addr } => {
-        //         self.pending_dial.insert(peer_id, );
-        //         let _ = self.swarm.dial_addr(addr, peer_id);
-        //     }
+    async fn handle_command(&mut self, command: Command) {
+        match command {
+            Command::DecodeCommand { val: _ } => {
+                unimplemented!()
+            }
+            Command::TorrentInfoCommand { torrent: _ } => {
+                unimplemented!()
+            }
+            Command::GetFileCommand {
+                output,
+                torrent,
+                peer,
+                tx,
+            } => {
+                let request_id = self
+                    .swarm
+                    .behaviour_mut()
+                    .request_response
+                    .send_request(&peer, TorrentRequest(torrent));
+                self.request_file_map.insert(request_id, tx);
+            }
+            Command::GetPeersCommand { torrent: _, .. } => {
+                unimplemented!()
+            }
+            Command::DialCommand {
+                peer_id,
+                torrent,
+                addr,
+                tx,
+            } => {
+                if let hashbrown::hash_map::Entry::Vacant(e) = self.pending_dial.entry(peer_id) {
+                    self.swarm
+                        .behaviour_mut()
+                        .kademlia
+                        .add_address(&peer_id, addr.clone());
+                    match self.swarm.dial(addr.with(Protocol::P2p(peer_id))) {
+                        Ok(()) => {
+                            e.insert(tx);
+                        }
+                        Err(e) => {
+                            let _ = tx.send(Err(Box::new(e)));
+                        }
+                    }
+                } else {
+                    todo!("Handle dial command")
+                }
+            }
+            Command::ListenCommand { addr, tx } => {
+                let _ = match self.swarm.listen_on(addr) {
+                    Ok(_) => tx.send(Ok(())),
+                    Err(e) => tx.send(Err(Box::new(e))),
+                };
+            }
+            Command::ProvideTorrent { file, channel } => {
+                unimplemented!()
+            }
+        }
     }
+
     // unimplemented!()
     // match command {}
 }
@@ -261,11 +306,7 @@ pub enum ProviderResult {
 #[derive(Debug, Clone)]
 pub enum ProviderError {}
 
-
-
-fn provider_result(){
-
-}
+fn provider_result() {}
 
 pub(crate) async fn metrics_server(registry: Registry) -> Result<(), std::io::Error> {
     unimplemented!()
@@ -279,8 +320,8 @@ mod tests {
     async fn test_network() {
         let (mut network_client, mut network_events, network_session) = new().await.unwrap();
         tokio::spawn(network_session.run());
-        let command = Command::ListenCommand {
-            addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
-        };
+        // let command = Command::ListenCommand {
+        //     addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
+        // };
     }
 }

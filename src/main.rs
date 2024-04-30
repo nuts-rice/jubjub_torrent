@@ -21,14 +21,15 @@ async fn main() {
     //moved to network
     let (mut network_client, mut network_events, network_session) = network::new().await.unwrap();
     tokio::spawn(network_session.run());
-    let command = crate::client::arguments::Command::ListenCommand {
-        addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
-    };
+    // let command = crate::client::arguments::Command::ListenCommand {
+    //     addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
+    //     tx,
+
+    // };
     let metrics = Metrics::new(&mut metrics_registry);
-    tokio::spawn(network::metrics_server(metrics_registry));
+    // tokio::spawn(network::metrics_server(metrics_registry));
     // loop {
     //     match
-
 }
 
 fn setup_tracing() -> Result<(), Box<dyn Error>> {

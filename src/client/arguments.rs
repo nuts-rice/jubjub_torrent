@@ -1,8 +1,9 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use libp2p::{core::Multiaddr, request_response::ResponseChannel};
-
+use futures::channel::oneshot;
 use libp2p::PeerId;
+use libp2p::{core::Multiaddr, request_response::ResponseChannel};
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 
 use std::path::PathBuf;
 
@@ -31,7 +32,7 @@ pub enum Mode {
     TrackingMode,
 }
 
-#[derive( Debug)]
+#[derive(Debug)]
 pub enum Command {
     DecodeCommand {
         val: String,
@@ -41,13 +42,13 @@ pub enum Command {
     },
     ListenCommand {
         addr: Multiaddr,
-        // tx: oneshot::Sender<Result<(), Box<dyn Error + Send>>>,
+        tx: oneshot::Sender<Result<(), Box<dyn Error + Send>>>,
     },
     DialCommand {
         peer_id: PeerId,
         torrent: PathBuf,
         addr: Multiaddr,
-        tx: futures::channel::oneshot::Sender<Result<(), Box<dyn std::error::Error + Send >>>
+        tx: futures::channel::oneshot::Sender<Result<(), Box<dyn std::error::Error + Send>>>,
     },
     GetPeersCommand {
         torrent: PathBuf,
@@ -55,12 +56,13 @@ pub enum Command {
     },
     ProvideTorrent {
         file: Vec<u8>,
-        channel: ResponseChannel<TorrentResponse>
+        channel: futures::channel::oneshot::Sender<()>,
     },
     GetFileCommand {
         output: PathBuf,
-        torrent: PathBuf,
+        torrent: String,
         peer: PeerId,
+        tx: oneshot::Sender<Result<Vec<u8>, Box<dyn Error + Send>>>,
     },
 }
 
