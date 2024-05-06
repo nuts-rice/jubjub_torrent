@@ -1,13 +1,11 @@
-use clap::{Parser, ValueEnum};
+use clap::{ArgMatches, Command, Parser, ValueEnum};
 use futures::channel::oneshot;
+use libp2p::core::Multiaddr;
 use libp2p::PeerId;
-use libp2p::{core::Multiaddr};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-
+use std::net::SocketAddr;
 use std::path::PathBuf;
-
-
 
 #[derive(Parser, Debug)]
 #[command(version, author, about)]
@@ -16,10 +14,114 @@ pub struct Args {
     pub host: String,
     #[arg(long)]
     pub ip: String,
-    pub port: u16,
     //TODO: move commands somewhere else
     // #[command(subcommand)]
     // pub cmd: Command,
+}
+#[derive(Debug, Clone)]
+pub struct TcpSettings {
+    pub address: SocketAddr,
+    pub socket_workers: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct WSSettings {
+    pub address: SocketAddr,
+    pub socket_workers: usize,
+}
+#[derive(Debug, Clone)]
+pub struct MetricsSettings {
+    pub address: SocketAddr,
+    pub route: String,
+    pub update_interval: u64,
+}
+
+impl Default for TcpSettings {
+    fn default() -> Self {
+        Self {
+            address: "127.0.0.1:3001".parse::<SocketAddr>().unwrap(),
+            socket_workers: 1,
+        }
+    }
+}
+impl Default for WSSettings {
+    fn default() -> Self {
+        Self {
+            address: "127.0.0.1:3000".parse::<SocketAddr>().unwrap(),
+            socket_workers: 1,
+        }
+    }
+}
+
+impl Default for MetricsSettings {
+    fn default() -> Self {
+        Self {
+            address: "127.0.0.1:9091".parse::<SocketAddr>().unwrap(),
+            route: "/metrics".to_string(),
+            update_interval: 5,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Settings {
+    pub tcp: TcpSettings,
+    pub ws: WSSettings,
+    pub metrics: MetricsSettings,
+    pub max_peers: usize,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            tcp: TcpSettings::default(),
+            ws: WSSettings::default(),
+            metrics: MetricsSettings::default(),
+            max_peers: 10,
+        }
+    }
+}
+
+impl Settings {
+    pub async fn new(matches: Command) -> Settings {
+        let matches = matches.get_matches();
+
+        // Try to open the file at the path specified in the args
+        let path = matches.get_one::<String>("config").unwrap();
+        let file: Option<String> = match std::fs::read_to_string(path) {
+            Ok(file) => Some(file),
+            Err(_) => panic!("\x1b[31mErr:\x1b[0m Error opening config file at {}", path),
+        };
+        if let Some(file) = file {
+            tracing::info!("Using config file at {}", path);
+            return Settings::create_from_file(file).await;
+        }
+
+        tracing::info!("using command line args for settings  ");
+        todo!()
+    }
+
+    async fn create_from_file(file: String) -> Settings {
+        unimplemented!()
+    }
+
+    fn create_from_matches(matches: ArgMatches) -> Settings {
+        let address = matches
+            .get_one::<String>("address")
+            .expect("address is required");
+        let port = matches.get_one::<String>("port").expect("Invalid port");
+        let address = if address.contains(':') {
+            address.to_string()
+        } else {
+            format!("{}:{}", address, port)
+        };
+
+        let address = address
+            .parse::<SocketAddr>()
+            .expect("Invalid address or port!");
+
+        unimplemented!()
+    }
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -33,7 +135,7 @@ pub enum Mode {
 }
 
 #[derive(Debug)]
-pub enum Command {
+pub enum ClientCommand {
     DecodeCommand {
         val: String,
     },
@@ -101,8 +203,8 @@ pub fn get_cmds() -> clap::Command {
         )
         .arg(
             Arg::new("port")
-                .long("address")
-                .short('a')
+                .long("port")
+                .short('p')
                 .num_args(1..)
                 .default_value("3001")
                 .help("port to listen to"),

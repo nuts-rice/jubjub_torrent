@@ -5,7 +5,7 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, error::Error};
 
-use crate::client::arguments::Command;
+use crate::client::arguments::ClientCommand;
 
 pub trait Node {
     fn get_peer_id(&self) -> u32;
@@ -24,7 +24,7 @@ pub(crate) struct Torrent {
     announce: Option<String>,
     pub info_hash: InfoHash,
     peers: hashbrown::HashMap<PeerId, SessionId>,
-    cmd_rx: futures::channel::mpsc::Receiver<Command>,
+    cmd_rx: futures::channel::mpsc::Receiver<ClientCommand>,
     listen_addr: libp2p::Multiaddr,
     started: Option<std::time::Instant>,
     completed: Option<Vec<usize>>,
@@ -60,6 +60,8 @@ impl Torrent {
         Ok(torrent)
     }
 }
+
+fn decode_torrent(torrent: &Torrent) {}
 
 #[derive(Deserialize, Serialize)]
 pub struct RequestHeader {}
@@ -178,8 +180,9 @@ impl std::fmt::Display for InfoHash {
 pub enum ChannelRequest {}
 
 mod tests {
-    
-    
+
+    use super::*;
+    use tracing::info;
 
     #[tokio::test]
     async fn test_tracker_URL() {

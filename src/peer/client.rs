@@ -1,4 +1,4 @@
-use crate::client::arguments::Command;
+use crate::client::arguments::ClientCommand;
 use crate::types::Node;
 use crate::types::Torrent;
 use ::futures::SinkExt;
@@ -12,7 +12,7 @@ use std::error::Error;
 use std::path::PathBuf;
 #[derive(Clone)]
 pub struct Client {
-    pub tx: mpsc::Sender<Command>,
+    pub tx: mpsc::Sender<ClientCommand>,
 }
 
 #[repr(C)]
@@ -56,7 +56,7 @@ impl Client {
     ) -> Result<(), Box<dyn Error + Send>> {
         let (tx, rx) = oneshot::channel();
         self.tx
-            .send(Command::ListenCommand { addr, tx })
+            .send(ClientCommand::ListenCommand { addr, tx })
             .await
             .expect("Receiver not dropped yet...");
         rx.await.expect("Sender not dropped yet...")
@@ -72,7 +72,7 @@ impl Client {
         let (tx, _rx) = oneshot::channel();
         let bytes = std::fs::read(file.clone()).expect("File not found");
         self.tx
-            .send(Command::ProvideTorrent {
+            .send(ClientCommand::ProvideTorrent {
                 file: bytes,
                 channel: tx,
             })
@@ -101,7 +101,7 @@ impl Client {
     ) -> Result<(), Box<dyn Error + Send>> {
         let (_tx, rx) = oneshot::channel();
         self.tx
-            .send(Command::DialCommand {
+            .send(ClientCommand::DialCommand {
                 peer_id,
                 torrent: PathBuf::from(torrent),
                 addr,
@@ -115,7 +115,7 @@ impl Client {
     async fn get_peers(&mut self, file: String) -> std::collections::HashSet<PeerId> {
         let (tx, rx) = oneshot::channel();
         self.tx
-            .send(Command::GetPeersCommand { tx, torrent: file })
+            .send(ClientCommand::GetPeersCommand { tx, torrent: file })
             .await
             .expect("Receiver not dropped yet...");
         rx.await.expect("Sender not dropped yet...")

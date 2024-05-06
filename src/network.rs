@@ -13,7 +13,7 @@ use libp2p::{
 };
 use tracing::info;
 
-use crate::client::arguments::Command;
+use crate::client::arguments::ClientCommand;
 use crate::types;
 use crate::types::Event;
 use crate::{
@@ -71,10 +71,10 @@ struct Behaviour {
 
 pub(crate) struct Session {
     swarm: Swarm<Behaviour>,
-    command_rx: mpsc::Receiver<Command>,
+    command_rx: mpsc::Receiver<ClientCommand>,
     event_tx: mpsc::Sender<types::Event>,
     pending_dial: HashMap<PeerId, oneshot::Sender<Result<(), Box<dyn Error + Send>>>>,
-    request_cmd_map: HashMap<OutboundRequestId, Command>,
+    request_cmd_map: HashMap<OutboundRequestId, ClientCommand>,
     provider_query_tx_map: HashMap<kad::QueryId, oneshot::Sender<()>>,
     request_file_map:
         HashMap<OutboundRequestId, oneshot::Sender<Result<Vec<u8>, Box<dyn Error + Send>>>>,
@@ -84,7 +84,7 @@ pub(crate) struct Session {
 impl Session {
     fn new(
         swarm: Swarm<Behaviour>,
-        command_rx: mpsc::Receiver<Command>,
+        command_rx: mpsc::Receiver<ClientCommand>,
         event_tx: mpsc::Sender<types::Event>,
     ) -> Self {
         Self {
@@ -228,15 +228,15 @@ impl Session {
         }
     }
 
-    async fn handle_command(&mut self, command: Command) {
+    async fn handle_command(&mut self, command: ClientCommand) {
         match command {
-            Command::DecodeCommand { val: _ } => {
+            ClientCommand::DecodeCommand { val: _ } => {
                 unimplemented!()
             }
-            Command::TorrentInfoCommand { torrent: _ } => {
+            ClientCommand::TorrentInfoCommand { torrent: _ } => {
                 unimplemented!()
             }
-            Command::GetFileCommand {
+            ClientCommand::GetFileCommand {
                 output: _,
                 torrent,
                 peer,
@@ -249,7 +249,7 @@ impl Session {
                     .send_request(&peer, TorrentRequest(torrent));
                 self.request_file_map.insert(request_id, tx);
             }
-            Command::GetPeersCommand { torrent, tx } => {
+            ClientCommand::GetPeersCommand { torrent, tx } => {
                 let query_id = self
                     .swarm
                     .behaviour_mut()
@@ -257,7 +257,7 @@ impl Session {
                     .get_providers(torrent.into_bytes().into());
                 self.query_peer_map.insert(query_id, tx);
             }
-            Command::DialCommand {
+            ClientCommand::DialCommand {
                 peer_id,
                 torrent: _,
                 addr,
@@ -280,13 +280,16 @@ impl Session {
                     todo!("Handle dial command")
                 }
             }
-            Command::ListenCommand { addr, tx } => {
+            ClientCommand::ListenCommand { addr, tx } => {
                 let _ = match self.swarm.listen_on(addr) {
                     Ok(_) => tx.send(Ok(())),
                     Err(e) => tx.send(Err(Box::new(e))),
                 };
             }
-            Command::ProvideTorrent { file: _, channel: _ } => {
+            ClientCommand::ProvideTorrent {
+                file: _,
+                channel: _,
+            } => {
                 unimplemented!()
             }
         }

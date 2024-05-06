@@ -6,21 +6,25 @@ pub mod parser;
 pub mod peer;
 pub mod types;
 
+use crate::client::arguments::{get_cmds, Settings};
 
 use libp2p::metrics::{Metrics, Registry};
 use opentelemetry::KeyValue;
 use std::error::Error;
+use std::sync::{Arc, RwLock};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Layer};
 #[tokio::main]
-async fn main() {
-    client::cli::cli();
+async fn main() -> Result<(), Box<dyn Error>> {
+    let config = Arc::new(RwLock::new(Settings::new(get_cmds()).await));
     setup_tracing().unwrap();
     let mut metrics_registry = Registry::default();
     //moved to network
     let (_network_client, _network_events, network_session) = network::new().await.unwrap();
     tokio::spawn(network_session.run());
+    setup_tracing();
+
     // let command = crate::client::arguments::Command::ListenCommand {
     //     addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
     //     tx,
@@ -30,6 +34,7 @@ async fn main() {
     // tokio::spawn(network::metrics_server(metrics_registry));
     // loop {
     //     match
+    Ok(())
 }
 
 fn setup_tracing() -> Result<(), Box<dyn Error>> {
