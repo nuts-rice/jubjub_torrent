@@ -1,13 +1,15 @@
-[peer]
+[jubjub]
 max_peers = 50
+address = "127.0.0.1:3000"
+
 [tcp]
-address = "127.0.0.1"
-port = 3001
-[websocket]
-
-
+address = "127.0.0.1:3001"
+socket_workers = 1 
+[ws]
+address = "127.0.0.1:3002"
+socket_workers = 1
 [metrics]
-address = "127.0.0.1:90901"
+address = "127.0.0.1:9091"
 route = "/metrics"
-update_interval = "5"
+update_interval = 5
 

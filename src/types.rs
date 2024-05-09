@@ -20,7 +20,7 @@ pub(crate) enum Event {
 
 pub type SessionId = u32;
 
-pub(crate) struct Torrent {
+pub struct Torrent {
     announce: Option<String>,
     pub info_hash: InfoHash,
     peers: hashbrown::HashMap<PeerId, SessionId>,
@@ -61,7 +61,7 @@ impl Torrent {
     }
 }
 
-fn decode_torrent(torrent: &Torrent) {}
+fn decode_torrent(_torrent: &Torrent) {}
 
 #[derive(Deserialize, Serialize)]
 pub struct RequestHeader {}
@@ -180,9 +180,6 @@ impl std::fmt::Display for InfoHash {
 pub enum ChannelRequest {}
 
 mod tests {
-
-    use super::*;
-    use tracing::info;
 
     #[tokio::test]
     async fn test_tracker_URL() {

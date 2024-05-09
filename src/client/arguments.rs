@@ -98,11 +98,107 @@ impl Settings {
         }
 
         tracing::info!("using command line args for settings  ");
-        todo!()
+        Settings::create_from_matches(matches)
     }
 
     async fn create_from_file(file: String) -> Settings {
-        unimplemented!()
+        use toml::Value;
+        let parsed = file.parse::<Value>().expect("Invalid config file");
+        let jubjub_table = parsed
+            .get("jubjub")
+            .expect("Missing jubjub field")
+            .as_table()
+            .expect("Invalid jubjub field");
+        let address = jubjub_table
+            .get("address")
+            .expect("Missing address field")
+            .as_str()
+            .expect("Invalid address field");
+        let tcp_table = parsed
+            .get("tcp")
+            .expect("Missing tcp field")
+            .as_table()
+            .expect("Invalid tcp field");
+        let ws_table = parsed
+            .get("ws")
+            .expect("Missing ws field")
+            .as_table()
+            .expect("Invalid ws field");
+        let port = 3001;
+        let address = address.replace("localhost", "127.0.0.1");
+        let address = if address.contains(':') {
+            address.to_string()
+        } else {
+            format!("{}:{}", address, port)
+        };
+        let address = address
+            .parse::<SocketAddr>()
+            .expect("\x1b[31mErr:\x1b[0m Could not address to SocketAddr!");
+        let tcp = TcpSettings {
+            address: tcp_table
+                .get("address")
+                .expect("Missing address field")
+                .as_str()
+                .unwrap()
+                .parse::<SocketAddr>()
+                .unwrap(),
+            socket_workers: tcp_table
+                .get("socket_workers")
+                .expect("Missing socket_workers field")
+                .as_integer()
+                .expect("Invalid socket_workers field") as usize,
+        };
+        let ws = WSSettings {
+            address: ws_table
+                .get("address")
+                .expect("Missing address field")
+                .as_str()
+                .unwrap()
+                .parse::<SocketAddr>()
+                .unwrap(),
+
+            socket_workers: ws_table
+                .get("socket_workers")
+                .expect("Missing socket_workers field")
+                .as_integer()
+                .expect("Invalid socket_workers field") as usize,
+        };
+        let metrics_table = parsed
+            .get("metrics")
+            .expect("Missing metrics field")
+            .as_table()
+            .expect("Invalid metrics field");
+        let metrics = MetricsSettings {
+            address: metrics_table
+                .get("address")
+                .expect("Missing address field")
+                .as_str()
+                .unwrap()
+                .parse::<SocketAddr>()
+                .expect("Invalid address field"),
+            route: metrics_table
+                .get("route")
+                .expect("Missing route field")
+                .as_str()
+                .expect("Invalid route field")
+                .to_string(),
+            update_interval: metrics_table
+                .get("update_interval")
+                .expect("Missing update_interval field")
+                .as_integer()
+                .expect("Invalid update_interval field") as u64,
+        };
+        let max_peers = jubjub_table
+            .get("max_peers")
+            .expect("Missing max_peers field")
+            .as_integer()
+            .expect("Invalid max_peers field") as usize;
+        Settings {
+            tcp,
+            ws,
+            metrics,
+            max_peers,
+        }
     }
 
     fn create_from_matches(matches: ArgMatches) -> Settings {
@@ -119,8 +215,50 @@ impl Settings {
         let address = address
             .parse::<SocketAddr>()
             .expect("Invalid address or port!");
-
-        unimplemented!()
+        let tcp = TcpSettings {
+            address,
+            socket_workers: 1,
+        };
+        let ws = WSSettings {
+            address,
+            socket_workers: 1,
+        };
+        let enabled = matches.get_occurrences::<String>("metrics").is_some();
+        let metrics = if enabled {
+            let address = matches
+                .get_one::<String>("metrics_address")
+                .expect("Invalid metrics_address");
+            let interval = matches
+                .get_one::<String>("update_interval")
+                .expect("Invalid update_interval")
+                .parse::<u64>()
+                .expect("Invalid update_interval");
+            let route = matches.get_one::<String>("route").expect("Invalid route");
+            MetricsSettings {
+                address: address
+                    .parse::<SocketAddr>()
+                    .expect("Invalid metrics address"),
+                route: route.to_string(),
+                update_interval: interval,
+            }
+        } else {
+            MetricsSettings {
+                route: "/metrics".to_string(),
+                address: "::1:9091".parse::<SocketAddr>().unwrap(),
+                update_interval: 10,
+            }
+        };
+        let max_peers = matches
+            .get_one::<String>("max_peers")
+            .expect("Invalid max_peers")
+            .parse::<usize>()
+            .expect("Invalid max_peers");
+        Settings {
+            tcp,
+            ws,
+            metrics,
+            max_peers,
+        }
     }
 }
 
@@ -166,6 +304,10 @@ pub enum ClientCommand {
         peer: PeerId,
         tx: oneshot::Sender<Result<Vec<u8>, Box<dyn Error + Send>>>,
     },
+}
+
+pub fn execute_cmd(tx: serde_json::Value) -> Result<(), Box<dyn Error>> {
+    unimplemented!()
 }
 
 pub fn get_cmds() -> clap::Command {
