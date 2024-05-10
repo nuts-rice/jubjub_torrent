@@ -69,6 +69,7 @@ pub struct Settings {
     pub ws: WSSettings,
     pub metrics: MetricsSettings,
     pub max_peers: usize,
+    pub download_dir: PathBuf,
 }
 
 impl Default for Settings {
@@ -78,6 +79,7 @@ impl Default for Settings {
             ws: WSSettings::default(),
             metrics: MetricsSettings::default(),
             max_peers: 10,
+            download_dir: "~/Downloads".parse::<PathBuf>().unwrap(),
         }
     }
 }
@@ -114,6 +116,13 @@ impl Settings {
             .expect("Missing address field")
             .as_str()
             .expect("Invalid address field");
+        let download_dir = jubjub_table
+            .get("download_dir")
+            .expect("Missing download_dir field")
+            .as_str()
+            .expect("Invalid download_dir field")
+            .parse::<PathBuf>()
+            .unwrap();
         let tcp_table = parsed
             .get("tcp")
             .expect("Missing tcp field")
@@ -198,6 +207,7 @@ impl Settings {
             ws,
             metrics,
             max_peers,
+            download_dir,
         }
     }
 
@@ -253,11 +263,18 @@ impl Settings {
             .expect("Invalid max_peers")
             .parse::<usize>()
             .expect("Invalid max_peers");
+        let download_dir = matches
+            .get_one::<String>("download_dir")
+            .expect("Invalid download dir")
+            .parse::<PathBuf>()
+            .expect("Invalid download dir");
+
         Settings {
             tcp,
             ws,
             metrics,
             max_peers,
+            download_dir,
         }
     }
 }
@@ -340,16 +357,57 @@ pub fn get_cmds() -> clap::Command {
                 .long("address")
                 .short('a')
                 .num_args(1..)
-                .default_value("127.0.0.1")
+                .default_value("127.0.0.1:3000")
                 .help("address to listen to"),
         )
         .arg(
-            Arg::new("port")
-                .long("port")
-                .short('p')
+            Arg::new("tcp_address")
+                .long("tcp_address")
                 .num_args(1..)
-                .default_value("3001")
-                .help("port to listen to"),
+                .default_value("127.0.0.1:3001")
+                .help("tcp address to listen to"),
+        )
+        .arg(
+            Arg::new("tcp_socket_workers")
+                .long("tcp_sockets")
+                .num_args(1..)
+                .default_value("1")
+                .help("number of tcp socket workers"),
+        )
+        .arg(
+            Arg::new("ws_address")
+                .long("ws_address")
+                .num_args(1..)
+                .default_value("127.0.0.1:3002")
+                .help("ws address to listen to"),
+        )
+        .arg(
+            Arg::new("ws_sockets")
+                .long("ws_sockets")
+                .num_args(1..)
+                .default_value("1")
+                .help("number of ws socket workers"),
+        )
+        .arg(
+            Arg::new("metrics_address")
+                .long("metrics_address")
+                .num_args(1..)
+                .default_value("127.0.0.1:9091")
+                .help("Address to listen to for the metrics"),
+        )
+        .arg(
+            Arg::new("metrics_route")
+                .long("metrics_route")
+                .num_args(1..)
+                .default_value("/metrics")
+                .help("route to listen to for the metrics"),
+        )
+        .arg(
+            Arg::new("metrics_interval")
+                .long("metrics_interval")
+                .num_args(1..)
+                .default_value("10")
+                .help("Interval in seconds to collect metrics"),
         )
 }
 

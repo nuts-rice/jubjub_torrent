@@ -17,14 +17,14 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Layer};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let _config = Arc::new(RwLock::new(Settings::new(get_cmds()).await));
+    let config = Arc::new(RwLock::new(Settings::new(get_cmds()).await));
+
     setup_tracing().unwrap();
     let mut metrics_registry = Registry::default();
     //moved to network
     let (mut network_client, mut network_events, network_session) = network::new().await.unwrap();
     tokio::spawn(network_session.run());
     let _ = setup_tracing();
-    let cmds = get_cmds();
     // let command = crate::client::arguments::Command::ListenCommand {
     //     addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
     //     tx,

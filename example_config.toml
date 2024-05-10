@@ -1,7 +1,7 @@
 [jubjub]
 max_peers = 50
 address = "127.0.0.1:3000"
-
+download_dir = "~/Downloads"
 [tcp]
 address = "127.0.0.1:3001"
 socket_workers = 1 
