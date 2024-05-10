@@ -1,4 +1,5 @@
 use crate::client::arguments::ClientCommand;
+use crate::peer::error::ClientError;
 use crate::types::Node;
 use crate::types::Torrent;
 use ::futures::SinkExt;
@@ -10,6 +11,7 @@ use serde_json as json;
 
 use std::error::Error;
 use std::path::PathBuf;
+use std::str::FromStr;
 #[derive(Clone)]
 pub struct Client {
     pub tx: mpsc::Sender<ClientCommand>,
@@ -53,22 +55,67 @@ impl Client {
     pub(crate) async fn start_listening(
         &mut self,
         addr: Multiaddr,
-    ) -> Result<(), Box<dyn Error + Send>> {
+    ) -> Result<json::Value, ClientError> {
         let (tx, rx) = oneshot::channel();
         self.tx
             .send(ClientCommand::ListenCommand { addr, tx })
             .await
             .expect("Receiver not dropped yet...");
-        rx.await.expect("Sender not dropped yet...")
+        rx.await.expect("Sender not dropped yet...");
+        let res = json::json!({
+            "result": "Listening on {:?}",
+        });
+        Ok(res)
     }
-    pub async fn get_file(&self, _file: String) -> Result<(), Box<dyn Error>> {
-        let _id = self.get_peer_id();
-        Ok(())
+    pub async fn get_file(&self, file: String) -> Result<json::Value, ClientError> {
+        let id = self.get_peer_id();
+        unimplemented!()
     }
 
-    pub(crate) async fn execute_command(_tx: serde_json::Value) {}
+    pub(crate) async fn execute_command(
+        mut self,
+        tx: serde_json::Value,
+    ) -> Result<json::Value, ClientError> {
+        let method = tx["method"].as_str();
+        println!("Method: {:?}", method.unwrap_or("None"));
+        match method {
+            Some("provide") => {
+                let file = tx["params"]["file"].as_str().unwrap();
+                Client::start_providing(&mut self, file.to_string()).await
+            }
+            Some("get") => {
+                let file = tx["params"]["file"].as_str().unwrap();
+                Client::get_file(&self, file.to_string()).await
+            }
+            Some("listen") => {
+                let addr = tx["params"]["addr"].as_str().unwrap();
+                Client::start_listening(&mut self, addr.parse().unwrap()).await
+            }
+            Some("dial") => {
+                let addr = tx["params"]["addr"].as_str().unwrap();
+                let peer_id = tx["params"]["peer_id"].as_str().unwrap();
+                let torrent = tx["params"]["torrent"].as_str().unwrap();
+                Client::dial(
+                    &mut self,
+                    addr.parse().unwrap(),
+                    PeerId::from_str(peer_id).unwrap(),
+                    torrent,
+                )
+                .await
+            }
+            Some("get_peers") => {
+                let file = tx["params"]["file"].as_str().unwrap();
+                Client::get_peers(&mut self, file.to_string()).await
+            }
+            Some(_) => Err(ClientError::InvalidMethod),
+            _ => Ok(().into()),
+        }
+    }
 
-    pub(crate) async fn start_providing(&mut self, file: String) {
+    pub(crate) async fn start_providing(
+        &mut self,
+        file: String,
+    ) -> Result<json::Value, ClientError> {
         let (tx, _rx) = oneshot::channel();
         let bytes = std::fs::read(file.clone()).expect("File not found");
         self.tx
@@ -78,6 +125,10 @@ impl Client {
             })
             .await
             .expect("Receiver not dropped yet...");
+        let res = json::json!({
+        "result": "Providing {:?}",
+                    });
+        Ok(res)
     }
 
     pub fn decode_value(val: String) -> (json::Value, String) {
@@ -98,7 +149,7 @@ impl Client {
         addr: Multiaddr,
         peer_id: PeerId,
         torrent: &str,
-    ) -> Result<(), Box<dyn Error + Send>> {
+    ) -> Result<json::Value, ClientError> {
         let (_tx, rx) = oneshot::channel();
         self.tx
             .send(ClientCommand::DialCommand {
@@ -109,16 +160,24 @@ impl Client {
             })
             .await
             .expect("Receiver not dropped yet...");
-        rx.await.expect("Sender not dropped yet...")
+        rx.await.expect("Sender not dropped yet...");
+        let res = json::json!({
+            "result": "Dialing {:?}",
+        });
+        Ok(res)
     }
 
-    async fn get_peers(&mut self, file: String) -> std::collections::HashSet<PeerId> {
+    async fn get_peers(&mut self, file: String) -> Result<json::Value, ClientError> {
         let (tx, rx) = oneshot::channel();
         self.tx
             .send(ClientCommand::GetPeersCommand { tx, torrent: file })
             .await
             .expect("Receiver not dropped yet...");
-        rx.await.expect("Sender not dropped yet...")
+        rx.await.expect("Sender not dropped yet...");
+        let res = json::json!({
+            "result": "Getting peers for {:?}",
+        });
+        Ok(res)
     }
 }
 
