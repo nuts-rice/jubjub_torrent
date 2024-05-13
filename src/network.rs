@@ -2,7 +2,16 @@ use futures::prelude::*;
 use futures::StreamExt;
 use hashbrown::HashMap;
 
-use libp2p::metrics::Registry;
+use crate::client::arguments::ClientCommand;
+use crate::client::arguments::Settings;
+use crate::metrics::MetricServer;
+use crate::types;
+use crate::types::Event;
+use crate::{
+    peer::client::Client,
+    types::{TorrentRequest, TorrentResponse},
+};
+use futures::channel::{mpsc, oneshot};
 use libp2p::StreamProtocol;
 use libp2p::{
     identity, kad,
@@ -11,36 +20,35 @@ use libp2p::{
     swarm::{NetworkBehaviour, Swarm, SwarmEvent},
     tcp, PeerId, SwarmBuilder,
 };
+use prometheus_client::registry::Registry;
 use tracing::info;
 
-use crate::client::arguments::ClientCommand;
-use crate::types;
-use crate::types::Event;
-use crate::{
-    peer::client::Client,
-    types::{TorrentRequest, TorrentResponse},
-};
-use futures::channel::{mpsc, oneshot};
-
 use std::error::Error;
+use std::sync::Arc;
+use std::sync::RwLock;
 use std::time::Duration;
 
-pub(crate) async fn new() -> Result<(Client, impl Stream<Item = Event>, Session), Box<dyn Error>> {
+pub(crate) async fn new(
+    _config: Arc<RwLock<Settings>>,
+    metrics: MetricServer,
+) -> Result<(Client, impl Stream<Item = Event>, Session), Box<dyn Error>> {
     let identity = identity::Keypair::generate_ed25519();
     let peer_id = identity.public().to_peer_id();
+    let mut metric_registry = Registry::default();
     info!(
         "Peer id: {:?}. Public key: {:?}",
         peer_id,
         identity.public()
     );
     // parser::chi_squared_test(&_bytes, &bytes);
-    let swarm = SwarmBuilder::with_existing_identity(identity)
+    let mut swarm = SwarmBuilder::with_existing_identity(identity)
         .with_tokio()
         .with_tcp(
             tcp::Config::default(),
             libp2p::noise::Config::new,
             libp2p::yamux::Config::default,
         )?
+        .with_bandwidth_metrics(&mut metric_registry)
         .with_behaviour(|key| Behaviour {
             kademlia: kad::Behaviour::new(
                 peer_id,
@@ -53,13 +61,14 @@ pub(crate) async fn new() -> Result<(Client, impl Stream<Item = Event>, Session)
         })?
         .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(30)))
         .build();
+    swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
     let (command_tx, command_rx) = mpsc::channel(0);
     let (event_tx, event_rx) = mpsc::channel(0);
 
     Ok((
         Client { tx: command_tx },
         event_rx,
-        Session::new(swarm, command_rx, event_tx),
+        Session::new(swarm, metrics, command_rx, event_tx),
     ))
 }
 
@@ -71,6 +80,7 @@ struct Behaviour {
 
 pub(crate) struct Session {
     swarm: Swarm<Behaviour>,
+    metrics: MetricServer,
     command_rx: mpsc::Receiver<ClientCommand>,
     event_tx: mpsc::Sender<types::Event>,
     pending_dial: HashMap<PeerId, oneshot::Sender<Result<(), Box<dyn Error + Send>>>>,
@@ -84,11 +94,13 @@ pub(crate) struct Session {
 impl Session {
     fn new(
         swarm: Swarm<Behaviour>,
+        metrics: MetricServer,
         command_rx: mpsc::Receiver<ClientCommand>,
         event_tx: mpsc::Sender<types::Event>,
     ) -> Self {
         Self {
             swarm,
+            metrics,
             command_rx,
             event_tx,
             pending_dial: Default::default(),
@@ -324,10 +336,14 @@ pub(crate) async fn metrics_server(_registry: Registry) -> Result<(), std::io::E
 mod tests {
 
     use super::*;
-
+    use crate::get_cmds;
     #[tokio::test]
     async fn test_network() {
-        let (mut network_client, mut network_events, network_session) = new().await.unwrap();
+        let config = Arc::new(RwLock::new(Settings::new(get_cmds()).await));
+        let registry = Registry::default();
+        let metrics = MetricServer::new(registry, config);
+        let (mut network_client, mut network_events, network_session) =
+            new(config, metrics).await.unwrap();
         tokio::spawn(network_session.run());
         // let command = Command::ListenCommand {
         //     addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),

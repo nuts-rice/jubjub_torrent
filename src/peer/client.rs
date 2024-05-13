@@ -9,7 +9,7 @@ use libp2p::PeerId;
 use serde_bencode as bencode;
 use serde_json as json;
 
-use std::error::Error;
+
 use std::path::PathBuf;
 use std::str::FromStr;
 #[derive(Clone)]
@@ -68,9 +68,9 @@ impl Client {
         Ok(res)
     }
     pub async fn get_file(&self, file: &str) -> Result<json::Value, ClientError> {
-        let file = Torrent::open(file);
+        let _file = Torrent::open(file);
 
-        let id = self.get_peer_id();
+        let _id = self.get_peer_id();
         unimplemented!()
     }
 

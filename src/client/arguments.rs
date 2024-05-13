@@ -140,7 +140,7 @@ impl Settings {
         } else {
             format!("{}:{}", address, port)
         };
-        let address = address
+        let _address = address
             .parse::<SocketAddr>()
             .expect("\x1b[31mErr:\x1b[0m Could not address to SocketAddr!");
         let tcp = TcpSettings {
@@ -323,7 +323,7 @@ pub enum ClientCommand {
     },
 }
 
-pub fn execute_cmd(tx: serde_json::Value) -> Result<(), Box<dyn Error>> {
+pub fn execute_cmd(_tx: serde_json::Value) -> Result<(), Box<dyn Error>> {
     unimplemented!()
 }
 

@@ -3,11 +3,11 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
-use libp2p::metrics::{Metrics, Registry};
+use libp2p::metrics::{Registry};
 use opentelemetry::KeyValue;
 use prometheus_client::encoding::text::encode;
 use std::error::Error;
-use std::net::TcpListener;
+
 use std::sync::{Arc, RwLock};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -22,7 +22,7 @@ pub struct MetricServer {
 }
 
 impl MetricServer {
-    fn new(registry: Registry, config: Arc<RwLock<Settings>>) -> Self {
+    pub fn new(registry: Registry, config: Arc<RwLock<Settings>>) -> Self {
         MetricServer {
             registry: Arc::new(RwLock::new(registry)),
             config,
@@ -70,7 +70,7 @@ pub(crate) async fn metrics_server(
     config: Arc<RwLock<Settings>>,
 ) -> Result<(), std::io::Error> {
     use tokio::net::TcpListener;
-    let (addr, interval, route) = {
+    let (addr, _interval, route) = {
         let config_guard = config.read().unwrap();
         (
             config_guard.metrics.address,
