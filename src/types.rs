@@ -47,7 +47,9 @@ impl Torrent {
         }
     }
 
-    async fn open(file: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn write<'a>(&self, bytes: &[u8]) {}
+
+    pub(crate) async fn open(file: &str) -> Result<Self, Box<dyn Error>> {
         let torrent = std::fs::read(file).unwrap();
 
         let torrent = Torrent::from_bytes(&torrent).unwrap();

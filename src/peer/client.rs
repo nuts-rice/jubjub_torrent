@@ -67,7 +67,9 @@ impl Client {
         });
         Ok(res)
     }
-    pub async fn get_file(&self, file: String) -> Result<json::Value, ClientError> {
+    pub async fn get_file(&self, file: &str) -> Result<json::Value, ClientError> {
+        let file = Torrent::open(file);
+
         let id = self.get_peer_id();
         unimplemented!()
     }
@@ -85,7 +87,7 @@ impl Client {
             }
             Some("get") => {
                 let file = tx["params"]["file"].as_str().unwrap();
-                Client::get_file(&self, file.to_string()).await
+                Client::get_file(&self, file).await
             }
             Some("listen") => {
                 let addr = tx["params"]["addr"].as_str().unwrap();
