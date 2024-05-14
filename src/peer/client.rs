@@ -9,7 +9,6 @@ use libp2p::PeerId;
 use serde_bencode as bencode;
 use serde_json as json;
 
-
 use std::path::PathBuf;
 use std::str::FromStr;
 #[derive(Clone)]

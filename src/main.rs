@@ -9,14 +9,11 @@ pub mod types;
 
 use crate::client::arguments::{get_cmds, Settings};
 
-use libp2p::metrics::{Registry};
+use libp2p::metrics::Registry;
 use metrics::MetricServer;
 
 use std::error::Error;
 use std::sync::{Arc, RwLock};
-
-
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

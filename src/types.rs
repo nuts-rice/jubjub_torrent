@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use cratetorrent::prelude::*;
 // use url::{Url, ParseError};
 use libp2p::{request_response::ResponseChannel, PeerId};
 use reqwest::Url;
@@ -47,8 +48,6 @@ impl Torrent {
         }
     }
 
-    pub fn write<'a>(&self, _bytes: &[u8]) {}
-
     pub(crate) async fn open(file: &str) -> Result<Self, Box<dyn Error>> {
         let torrent = std::fs::read(file).unwrap();
 
@@ -63,17 +62,20 @@ impl Torrent {
     }
 }
 
-fn decode_torrent(_torrent: &Torrent) {}
+fn decode_torrent(torrent: &Torrent) {}
 
 #[derive(Deserialize, Serialize)]
-pub struct RequestHeader {}
+pub struct RequestHeader {
+    request: self::Request,
+}
 
-#[async_trait]
-pub trait TorrentFile {
-    type File;
-    async fn from_file(file: &str) -> Self;
-    async fn from_bytes(bytes: &[u8]) -> Self;
-    async fn build_tracker_URL(&self) -> anyhow::Result<String>;
+#[derive(Debug, Clone, PartialEq)]
+pub enum FileStatus {
+    Paused = 0,
+    Downloading = 1,
+    DownloadQueued = 2,
+    Seeding = 3,
+    SeedQueued = 4,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -146,9 +148,17 @@ impl File {
     //     unimplemented!()
     // }
 
-    async fn check_piece(&self, _index: u64) -> Result<bool, Box<dyn Error>> {
-        unimplemented!()
+    async fn check_piece(&self, index: u64) -> Result<bool, Box<dyn Error>> {
+        let piece = self.piece_hash.get(index as usize).unwrap();
+        Ok(true)
     }
+}
+#[derive(Deserialize, Serialize, Debug)]
+pub enum Request {
+    List(ListRequest),
+    Torrent(TorrentRequest),
+    Piece(PieceRequest),
+    ConnectionRequest(ConnectionRequest),
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -157,11 +167,14 @@ pub(crate) struct TorrentRequest(pub String);
 pub(crate) struct TorrentResponse(pub Vec<u8>);
 
 #[derive(Deserialize, Serialize, Debug)]
+pub struct ConnectionRequest {}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub(crate) struct PieceRequest(pub String);
 #[derive(Deserialize, Serialize, Debug)]
 pub(crate) struct PieceResponse(pub Vec<HashSet<String>>);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ListRequest {
     pub info_hashes: Vec<[u8; 20]>,
 }
@@ -182,8 +195,21 @@ impl std::fmt::Display for InfoHash {
 pub enum ChannelRequest {}
 
 mod tests {
-
-    #[tokio::test]
+    use super::*;
+    async fn test_file_new() {
+        let file = File::new(
+            Some("http://tracker.com".to_string()),
+            vec![0; 20],
+            vec![0; 20],
+            10,
+            100,
+            "test".to_string(),
+            RequestHeader {
+                request: Request::Torrent(TorrentRequest("test_torrent".to_string())),
+            },
+        );
+        assert_eq!(file.length, 100);
+    }
     async fn test_tracker_URL() {
         let peer_id = PeerId::random();
         let file = File::new(
@@ -193,10 +219,12 @@ mod tests {
             10,
             100,
             "test".to_string(),
-            RequestHeader {},
+            RequestHeader {
+                request: Request::Torrent(TorrentRequest("test_torrent".to_string())),
+            },
         );
         let url = file.build_tracker_URL(peer_id, 9091).await.unwrap();
-        info!("url: {}", url);
+        tracing::info!("url: {}", url);
         let expected = format!(
             "http://tracker.com/?peer_id={}&port=9091&uploaded=0&downloaded=0&left=100",
             peer_id

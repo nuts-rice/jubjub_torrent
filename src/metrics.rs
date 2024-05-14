@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
-use libp2p::metrics::{Registry};
+use libp2p::metrics::Registry;
 use opentelemetry::KeyValue;
 use prometheus_client::encoding::text::encode;
 use std::error::Error;

@@ -1,6 +1,7 @@
 use futures::prelude::*;
 use futures::StreamExt;
 use hashbrown::HashMap;
+use libp2p::Multiaddr;
 
 use crate::client::arguments::ClientCommand;
 use crate::client::arguments::Settings;
@@ -29,12 +30,20 @@ use std::sync::RwLock;
 use std::time::Duration;
 
 pub(crate) async fn new(
-    _config: Arc<RwLock<Settings>>,
+    config: Arc<RwLock<Settings>>,
     metrics: MetricServer,
 ) -> Result<(Client, impl Stream<Item = Event>, Session), Box<dyn Error>> {
     let identity = identity::Keypair::generate_ed25519();
     let peer_id = identity.public().to_peer_id();
     let mut metric_registry = Registry::default();
+    let (tcp_addr, workers, download_dir) = {
+        let config_guard = config.read().unwrap();
+        (
+            config_guard.tcp.address,
+            config_guard.tcp.socket_workers,
+            config_guard.download_dir.clone(),
+        )
+    };
     info!(
         "Peer id: {:?}. Public key: {:?}",
         peer_id,
@@ -61,7 +70,10 @@ pub(crate) async fn new(
         })?
         .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(30)))
         .build();
-    swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
+    let address: Multiaddr = (format!("/ip4/{}/tcp/{}", tcp_addr.ip(), tcp_addr.port()))
+        .parse()
+        .unwrap();
+    swarm.listen_on(address)?;
     let (command_tx, command_rx) = mpsc::channel(0);
     let (event_tx, event_rx) = mpsc::channel(0);
 
