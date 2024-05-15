@@ -22,11 +22,8 @@ pub struct MetricServer {
 }
 
 impl MetricServer {
-    pub fn new(registry: Registry, config: Arc<RwLock<Settings>>) -> Self {
-        MetricServer {
-            registry: Arc::new(RwLock::new(registry)),
-            config,
-        }
+    pub fn new(registry: Arc<RwLock<Registry>>, config: Arc<RwLock<Settings>>) -> Self {
+        MetricServer { registry, config }
     }
     fn get_registry(&self) -> Arc<RwLock<Registry>> {
         Arc::clone(&self.registry)
@@ -66,7 +63,7 @@ pub(crate) async fn metrics_handler(State(server): State<MetricServer>) -> impl 
 pub(crate) async fn metrics_sink() {}
 
 pub(crate) async fn metrics_server(
-    registry: Registry,
+    registry: Arc<RwLock<Registry>>,
     config: Arc<RwLock<Settings>>,
 ) -> Result<(), std::io::Error> {
     use tokio::net::TcpListener;
