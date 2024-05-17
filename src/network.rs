@@ -364,14 +364,14 @@ mod tests {
         let (mut network_client, mut network_events, network_session) =
             new(config_rwlock.clone(), metrics).await.unwrap();
         let (address) = config_rwlock.read().unwrap().tcp.address;
-        let addr = (format!("/ip4/{}/tcp/{}", address.ip(), address.port())
+        let (addr) = format!("/ip4/{}/tcp/{}", address.ip(), address.port())
             .parse::<Multiaddr>()
-            .unwrap());
+            .unwrap();
         let (tx, rx) = oneshot::channel();
         tokio::spawn(network_session.run());
         let command = ClientCommand::ListenCommand { addr, tx };
-        // let command = Command::ListenCommand {
-        //     addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
-        // };
+        network_client.tx.send(command).await.unwrap();
+        let result = rx.await.unwrap();
+        info!("{:?}", result);
     }
 }
