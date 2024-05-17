@@ -1,3 +1,4 @@
+use axum::Router;
 use futures::prelude::*;
 use futures::StreamExt;
 use hashbrown::HashMap;
@@ -76,7 +77,6 @@ pub(crate) async fn new(
     swarm.listen_on(address)?;
     let (command_tx, command_rx) = mpsc::channel(0);
     let (event_tx, event_rx) = mpsc::channel(0);
-
     Ok((
         Client { tx: command_tx },
         event_rx,
@@ -346,17 +346,30 @@ pub(crate) async fn metrics_server(_registry: Registry) -> Result<(), std::io::E
 }
 #[cfg(test)]
 mod tests {
+    use libp2p::Multiaddr;
+    use std::sync::Arc;
 
+    async fn create_mock_config() -> Arc<RwLock<Settings>> {
+        let mut config = Settings::new(get_cmds()).await;
+        Arc::new(RwLock::new(config))
+    }
     use super::*;
     use crate::get_cmds;
     #[tokio::test]
+    //RUST_LOG=info cargo test  -- test_network --nocapture
     async fn test_network() {
-        let config = Arc::new(RwLock::new(Settings::new(get_cmds()).await));
-        let registry = Registry::default();
-        let metrics = MetricServer::new(registry, config);
+        let config_rwlock = create_mock_config().await;
+        let registry_rwlock = Arc::new(RwLock::new(Registry::default()));
+        let metrics = MetricServer::new(registry_rwlock, config_rwlock.clone());
         let (mut network_client, mut network_events, network_session) =
-            new(config, metrics).await.unwrap();
+            new(config_rwlock.clone(), metrics).await.unwrap();
+        let (address) = config_rwlock.read().unwrap().tcp.address;
+        let addr = (format!("/ip4/{}/tcp/{}", address.ip(), address.port())
+            .parse::<Multiaddr>()
+            .unwrap());
+        let (tx, rx) = oneshot::channel();
         tokio::spawn(network_session.run());
+        let command = ClientCommand::ListenCommand { addr, tx };
         // let command = Command::ListenCommand {
         //     addr: "/ip4/127.0.0.1/tcp/0".parse().unwrap(),
         // };

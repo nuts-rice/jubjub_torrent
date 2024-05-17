@@ -60,22 +60,24 @@ pub(crate) async fn metrics_handler(State(server): State<MetricServer>) -> impl 
     )
 }
 
-pub(crate) async fn metrics_sink() {}
+pub(crate) async fn metrics_sink() {
+    // loop {
+    //     while let
+    // }
+}
 
-pub(crate) async fn metrics_server(
-    registry: Arc<RwLock<Registry>>,
-    config: Arc<RwLock<Settings>>,
-) -> Result<(), std::io::Error> {
+pub(crate) async fn metrics_server(metrics: MetricServer) -> Result<(), std::io::Error> {
     use tokio::net::TcpListener;
     let (addr, _interval, route) = {
-        let config_guard = config.read().unwrap();
+        let config_guard = metrics.config.read().unwrap();
         (
             config_guard.metrics.address,
             config_guard.metrics.update_interval,
             config_guard.metrics.route.clone(),
         )
     };
-    let metric_server = MetricServer::new(registry, config);
+    let interval = tokio::time::interval(std::time::Duration::from_secs_f64(_interval as f64));
+    let metric_server = MetricServer::new(metrics.registry, metrics.config);
     let server = Router::new()
         .route(&route, get(metrics_handler))
         .with_state(metric_server);
@@ -83,5 +85,10 @@ pub(crate) async fn metrics_server(
     let local_addr = listener.local_addr()?;
     tracing::info!(metrics_server=%format!("http://{}/metrics", local_addr));
     axum::serve(listener, server.into_make_service()).await?;
+    // loop {
+    // interval.tick().await;
+    // registry.write().unwrap().;
+    // Ok(())
+    // }
     Ok(())
 }
