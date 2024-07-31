@@ -1,10 +1,9 @@
-use async_trait::async_trait;
 use cratetorrent::prelude::*;
 // use url::{Url, ParseError};
 use libp2p::{request_response::ResponseChannel, PeerId};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, error::Error};
+use std::{collections::HashSet, error::Error, path::PathBuf};
 
 use crate::client::arguments::ClientCommand;
 
@@ -87,6 +86,7 @@ pub struct File {
     pub piece_length: u64,
     pub length: usize,
     pub name: String,
+    pub destination: Option<PathBuf>,
 }
 
 impl File {
@@ -98,6 +98,7 @@ impl File {
         length: usize,
         name: String,
         request_header: RequestHeader,
+        destination: Option<PathBuf>,
     ) -> Self {
         Self {
             header: request_header,
@@ -107,6 +108,7 @@ impl File {
             piece_length,
             length,
             name,
+            destination,
         }
     }
 
@@ -197,6 +199,7 @@ pub enum ChannelRequest {}
 mod tests {
     use super::*;
     async fn test_file_new() {
+        let destination_dir = Some("/Downloads".parse::<PathBuf>().unwrap());
         let file = File::new(
             Some("http://tracker.com".to_string()),
             vec![0; 20],
@@ -207,11 +210,14 @@ mod tests {
             RequestHeader {
                 request: Request::Torrent(TorrentRequest("test_torrent".to_string())),
             },
+            destination_dir,
         );
         assert_eq!(file.length, 100);
     }
     async fn test_tracker_URL() {
         let peer_id = PeerId::random();
+        let destination_dir = Some("/Downloads".parse::<PathBuf>().unwrap());
+
         let file = File::new(
             Some("http://tracker.com".to_string()),
             vec![0; 20],
@@ -222,6 +228,7 @@ mod tests {
             RequestHeader {
                 request: Request::Torrent(TorrentRequest("test_torrent".to_string())),
             },
+            destination_dir,
         );
         let url = file.build_tracker_URL(peer_id, 9091).await.unwrap();
         tracing::info!("url: {}", url);

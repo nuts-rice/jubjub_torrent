@@ -1,4 +1,3 @@
-use axum::Router;
 use futures::prelude::*;
 use futures::StreamExt;
 use hashbrown::HashMap;
@@ -350,7 +349,7 @@ mod tests {
     use std::sync::Arc;
 
     async fn create_mock_config() -> Arc<RwLock<Settings>> {
-        let mut config = Settings::new(get_cmds()).await;
+        let config = Settings::new(get_cmds()).await;
         Arc::new(RwLock::new(config))
     }
     use super::*;
@@ -361,10 +360,10 @@ mod tests {
         let config_rwlock = create_mock_config().await;
         let registry_rwlock = Arc::new(RwLock::new(Registry::default()));
         let metrics = MetricServer::new(registry_rwlock, config_rwlock.clone());
-        let (mut network_client, mut network_events, network_session) =
+        let (mut network_client, network_events, network_session) =
             new(config_rwlock.clone(), metrics).await.unwrap();
-        let (address) = config_rwlock.read().unwrap().tcp.address;
-        let (addr) = format!("/ip4/{}/tcp/{}", address.ip(), address.port())
+        let address = config_rwlock.read().unwrap().tcp.address;
+        let addr = format!("/ip4/{}/tcp/{}", address.ip(), address.port())
             .parse::<Multiaddr>()
             .unwrap();
         let (tx, rx) = oneshot::channel();
