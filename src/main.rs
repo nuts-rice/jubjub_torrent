@@ -87,7 +87,34 @@ impl eframe::App for App {
 }
 
 fn preview_files(ctx: &egui::Context) {
-    unimplemented!()
+    use egui::*;
+    use std::fmt::Write as _;
+    if !ctx.input(|i| i.raw.hovered_files.is_empty()) {
+        let text = ctx.input(|i| {
+            let mut text = "Dropped files:\n".to_owned();
+            for file in &i.raw.hovered_files {
+                if let Some(path) = &file.path {
+                    writeln!(text, "{:?}", path.display()).ok();
+                } else if !file.mime.is_empty() {
+                    writeln!(text, "{}", file.mime).ok();
+                }
+            }
+            text
+        });
+        let painter = ctx.layer_painter(egui::LayerId::new(
+            egui::Order::Foreground,
+            Id::new("file_drop_target"),
+        ));
+        let screen_rect = ctx.screen_rect();
+        painter.rect_filled(screen_rect, 0.0, Color32::from_black_alpha(200));
+        painter.text(
+            screen_rect.center(),
+            egui::Align2::CENTER_CENTER,
+            text,
+            TextStyle::Heading.resolve(&ctx.style()),
+            Color32::WHITE,
+        );
+    }
 }
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -106,7 +133,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tokio::spawn(metrics::metrics_server(metrics));
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([320.0, 240.0])
+            .with_inner_size([860.0, 720.0])
             .with_drag_and_drop(true),
         ..Default::default()
     };
