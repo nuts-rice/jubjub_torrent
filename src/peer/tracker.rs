@@ -4,6 +4,8 @@ use libp2p::{
     identity::Keypair, // mdns
 };
 
+pub enum TrackerMode {}
+
 use super::client::Client;
 
 async fn start_discovery(_id_key: Keypair, _client: Client, _file: PathBuf) {

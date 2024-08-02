@@ -1,6 +1,7 @@
 use cratetorrent::prelude::*;
 // use url::{Url, ParseError};
 use libp2p::{request_response::ResponseChannel, PeerId};
+
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, error::Error, path::PathBuf};
@@ -65,7 +66,7 @@ fn decode_torrent(torrent: &Torrent) {}
 
 #[derive(Deserialize, Serialize)]
 pub struct RequestHeader {
-    request: self::Request,
+    request: Request,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -179,6 +180,14 @@ pub(crate) struct PieceResponse(pub Vec<HashSet<String>>);
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ListRequest {
     pub info_hashes: Vec<InfoHash>,
+    downloaded: u64,
+    left: u64,
+    uploaded: u64,
+    // event: SwarmEvent<>,
+    ip_address: u32,
+    key: u32,
+    num_want: i32,
+    port: u16,
 }
 
 #[derive(Ord, PartialOrd, Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
@@ -210,11 +219,13 @@ fn unpack<'a, T: Deserialize<'a>>(bytes: &'a [u8]) -> Result<T, Box<dyn Error>> 
 pub enum ChannelRequest {}
 
 mod tests {
-    
+    use super::*;
     #[tokio::test]
     async fn test_bincode_serialize() {
         let buffer = [0u8; 20];
-        todo!()
+        let infohash = InfoHash { hash: buffer };
+
+        // assert!(pack(&infohash).is_ok());
     }
     async fn test_file_new() {
         // let destination_dir = Some("/Downloads".parse::<PathBuf>().unwrap());

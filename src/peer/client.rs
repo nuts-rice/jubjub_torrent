@@ -1,5 +1,6 @@
 use crate::client::arguments::ClientCommand;
 use crate::peer::error::ClientError;
+use crate::types::InfoHash;
 use crate::types::Node;
 use crate::types::Torrent;
 use ::futures::SinkExt;
@@ -23,6 +24,25 @@ pub struct Handshake {
     pub reserved: [u8; 8],
     pub info_hash: [u8; 20],
     pub peer_id: [u8; 20],
+}
+
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone)]
+pub struct TrackerInfoHash {
+    pub hash: [u8; 20],
+}
+
+impl std::convert::From<&[u8]> for TrackerInfoHash {
+    fn from(bytes: &[u8]) -> Self {
+        let mut info_hash: TrackerInfoHash = TrackerInfoHash { hash: [0u8; 20] };
+        info_hash.hash.copy_from_slice(&bytes[..20]);
+        info_hash
+    }
+}
+
+impl From<[u8; 20]> for TrackerInfoHash {
+    fn from(bytes: [u8; 20]) -> Self {
+        TrackerInfoHash { hash: bytes }
+    }
 }
 
 impl Handshake {
@@ -195,5 +215,11 @@ mod tests {
             "decoded bencode val: {:?}, serialized: {:?}",
             val, serialized
         );
+        assert_eq!(val, json::Value::String("d4:spam3:egge".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_tracker() {
+        todo!()
     }
 }
