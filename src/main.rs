@@ -86,6 +86,10 @@ impl eframe::App for App {
     }
 }
 
+async fn preview_torrent_info(ctx: &egui::Context) {
+    todo!()
+}
+
 fn preview_files(ctx: &egui::Context) {
     use egui::*;
     use std::fmt::Write as _;

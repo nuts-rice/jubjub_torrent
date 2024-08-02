@@ -22,12 +22,24 @@ use libp2p::{
     tcp, PeerId, SwarmBuilder,
 };
 use prometheus_client::registry::Registry;
-use tracing::info;
-
 use std::error::Error;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
+use thiserror::Error;
+use tracing::info;
+
+#[derive(Debug, Error)]
+pub enum NetworkError {
+    #[error("Failed to send Request command to client: {0}")]
+    RequestResponseError(String),
+    #[error("Provider error for {0}: {1}")]
+    ProviderError(String, String),
+    #[error("Failed to set up new network connection: {0} ")]
+    CreateError(String),
+    #[error("Failed to create swarm for identity: {0}")]
+    SwarmError(String),
+}
 
 pub(crate) async fn new(
     config: Arc<RwLock<Settings>>,
@@ -57,6 +69,7 @@ pub(crate) async fn new(
             libp2p::noise::Config::new,
             libp2p::yamux::Config::default,
         )?
+        // .unwrap()
         .with_bandwidth_metrics(&mut metric_registry)
         .with_behaviour(|key| Behaviour {
             kademlia: kad::Behaviour::new(
@@ -335,8 +348,6 @@ pub enum ProviderResult {
         closest_peers: Vec<PeerId>,
     },
 }
-#[derive(Debug, Clone)]
-pub enum ProviderError {}
 
 fn provider_result() {}
 
