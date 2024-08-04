@@ -28,6 +28,13 @@ use std::sync::RwLock;
 use std::time::Duration;
 use thiserror::Error;
 use tracing::info;
+const BOOTNODES: [&str; 4] = [
+    "QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
+    "QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
+    "QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
+    "QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
+];
+const IPFS_PROTO_NAME: StreamProtocol = StreamProtocol::new("/ipfs/kad/1.0.0");
 
 #[derive(Debug, Error)]
 pub enum NetworkError {
@@ -334,9 +341,8 @@ impl Session {
     // unimplemented!()
     // match command {}
 }
-pub fn fetch_providers() {}
+async fn fetch_providers() -> Result<ProviderResult, ProviderError> {}
 
-pub type FetchProvidersResult = Result<ProviderResult, ProviderError>;
 //override provider result
 #[derive(Debug, Clone)]
 pub enum ProviderResult {

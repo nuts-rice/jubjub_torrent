@@ -5,7 +5,7 @@ use libp2p::PeerId;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
 #[command(version, author, about)]
@@ -25,14 +25,22 @@ pub struct TcpSettings {
 }
 
 #[derive(Debug, Clone)]
+pub struct IPFSSettings {
+    pub address: Option<Multiaddr>,
+    pub socket_workers: Option<usize>,
+    pub path: Option<String>,
+    pub timeout: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
 pub struct WSSettings {
-    pub address: SocketAddr,
+    pub address: Option<SocketAddr>,
     pub socket_workers: usize,
 }
 #[derive(Debug, Clone)]
 pub struct MetricsSettings {
-    pub address: SocketAddr,
-    pub route: String,
+    pub address: Option<SocketAddr>,
+    pub route: Option<String>,
     pub update_interval: u64,
 }
 
@@ -47,8 +55,8 @@ impl Default for TcpSettings {
 impl Default for WSSettings {
     fn default() -> Self {
         Self {
-            address: "127.0.0.1:3000".parse::<SocketAddr>().unwrap(),
-            socket_workers: 1,
+            address: Some("127.0.0.1:3000".parse::<SocketAddr>().unwrap()),
+            socket_workers: Some(1),
         }
     }
 }
@@ -56,9 +64,9 @@ impl Default for WSSettings {
 impl Default for MetricsSettings {
     fn default() -> Self {
         Self {
-            address: "127.0.0.1:9091".parse::<SocketAddr>().unwrap(),
-            route: "/metrics".to_string(),
-            update_interval: 5,
+            address: Some("127.0.0.1:9091".parse::<SocketAddr>().unwrap()),
+            route: Some("/metrics".to_string()),
+            update_interval: Some(5),
         }
     }
 }
@@ -164,13 +172,14 @@ impl Settings {
                 .as_str()
                 .unwrap()
                 .parse::<SocketAddr>()
-                .unwrap(),
+                .ok(),
 
             socket_workers: ws_table
                 .get("socket_workers")
                 .expect("Missing socket_workers field")
                 .as_integer()
-                .expect("Invalid socket_workers field") as usize,
+                .expect("Invalid socket_workers field") as usize)
+
         };
         let metrics_table = parsed
             .get("metrics")
@@ -184,17 +193,18 @@ impl Settings {
                 .as_str()
                 .unwrap()
                 .parse::<SocketAddr>()
-                .expect("Invalid address field"),
+                .ok(),
             route: metrics_table
                 .get("route")
                 .expect("Missing route field")
                 .as_str()
                 .expect("Invalid route field")
-                .to_string(),
+                .to_string()
+                .ok(),
             update_interval: metrics_table
                 .get("update_interval")
                 .expect("Missing update_interval field")
-                .as_integer()
+                .parse::<u64>()
                 .expect("Invalid update_interval field") as u64,
         };
         let max_peers = jubjub_table
@@ -230,8 +240,9 @@ impl Settings {
             socket_workers: 1,
         };
         let ws = WSSettings {
-            address,
+            Some(address),
             socket_workers: 1,
+
         };
         let enabled = matches.get_occurrences::<String>("metrics").is_some();
         let metrics = if enabled {
