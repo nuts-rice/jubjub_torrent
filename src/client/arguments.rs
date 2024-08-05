@@ -26,21 +26,21 @@ pub struct TcpSettings {
 
 #[derive(Debug, Clone)]
 pub struct IPFSSettings {
-    pub address: Option<Multiaddr>,
-    pub socket_workers: Option<usize>,
-    pub path: Option<String>,
-    pub timeout: Option<u64>,
+    pub address: Multiaddr,
+    pub socket_workers: usize,
+    pub path: String,
+    pub timeout: u64,
 }
 
 #[derive(Debug, Clone)]
 pub struct WSSettings {
-    pub address: Option<SocketAddr>,
+    pub address: SocketAddr,
     pub socket_workers: usize,
 }
 #[derive(Debug, Clone)]
 pub struct MetricsSettings {
-    pub address: Option<SocketAddr>,
-    pub route: Option<String>,
+    pub address: SocketAddr,
+    pub route: String,
     pub update_interval: u64,
 }
 
@@ -55,8 +55,8 @@ impl Default for TcpSettings {
 impl Default for WSSettings {
     fn default() -> Self {
         Self {
-            address: Some("127.0.0.1:3000".parse::<SocketAddr>().unwrap()),
-            socket_workers: Some(1),
+            address: ("127.0.0.1:3000".parse::<SocketAddr>().unwrap()),
+            socket_workers: 1,
         }
     }
 }
@@ -64,9 +64,9 @@ impl Default for WSSettings {
 impl Default for MetricsSettings {
     fn default() -> Self {
         Self {
-            address: Some("127.0.0.1:9091".parse::<SocketAddr>().unwrap()),
-            route: Some("/metrics".to_string()),
-            update_interval: Some(5),
+            address: ("127.0.0.1:9091".parse::<SocketAddr>().unwrap()),
+            route: ("/metrics".to_string()),
+            update_interval: 5,
         }
     }
 }
@@ -172,15 +172,47 @@ impl Settings {
                 .as_str()
                 .unwrap()
                 .parse::<SocketAddr>()
-                .ok(),
+                .unwrap(),
+                            
 
             socket_workers: ws_table
                 .get("socket_workers")
                 .expect("Missing socket_workers field")
                 .as_integer()
-                .expect("Invalid socket_workers field") as usize)
+                .expect("Invalid socket_workers field") as usize
+
 
         };
+        let ipfs_table = parsed
+            .get("ipfs")
+            .expect("Missing ipfs field")
+            .as_table()
+            .expect("Invalid ipfs field");
+        let ipfs = IPFSSettings {
+            address: ipfs_table
+                .get("address")
+                .expect("Missing address field")
+                .as_str()
+                .unwrap()
+                .parse::<Multiaddr>()
+                .unwrap(),
+            socket_workers: ipfs_table
+                .get("socket_workers")
+                .expect("Missing socket_workers field")
+                .as_integer()
+                .expect("Invalid socket_workers field") as usize,
+            path: ipfs_table
+                .get("path")
+                .expect("Missing path field")
+                .as_str()
+                .unwrap()
+                .to_string(),
+            timeout: ipfs_table
+                .get("timeout")
+                .expect("Missing timeout field")
+                .as_integer()
+                .expect("Invalid timeout field") as u64,
+               }; 
         let metrics_table = parsed
             .get("metrics")
             .expect("Missing metrics field")
@@ -193,19 +225,21 @@ impl Settings {
                 .as_str()
                 .unwrap()
                 .parse::<SocketAddr>()
-                .ok(),
+                .unwrap(),
+                            
             route: metrics_table
                 .get("route")
                 .expect("Missing route field")
                 .as_str()
                 .expect("Invalid route field")
-                .to_string()
-                .ok(),
+                .to_string(),
+                            
             update_interval: metrics_table
                 .get("update_interval")
                 .expect("Missing update_interval field")
-                .parse::<u64>()
-                .expect("Invalid update_interval field") as u64,
+                .as_integer()
+                .unwrap() as u64
+                        
         };
         let max_peers = jubjub_table
             .get("max_peers")
@@ -240,7 +274,7 @@ impl Settings {
             socket_workers: 1,
         };
         let ws = WSSettings {
-            Some(address),
+            address,
             socket_workers: 1,
 
         };
@@ -420,6 +454,46 @@ pub fn get_cmds() -> clap::Command {
                 .default_value("10")
                 .help("Interval in seconds to collect metrics"),
         )
+        .arg(
+            Arg::new("ipfs_address")
+                .long("ipfs_address")
+                .num_args(1..)
+                .default_value("10")
+                .help("ipfs address to listen to"),
+                )
+     
+                .arg(
+
+            Arg::new("ipfs_address")
+                .long("ipfs_address")
+                .num_args(1..)
+                .default_value("10")
+                .help("ipfs address to listen to"),
+
+
+            )
+                                .arg(
+
+            Arg::new("ipfs_socket_worker")
+                .long("ipfs_socket_worker")
+                .num_args(1..)
+                .default_value("10")
+                .help("number of ipfs socket workers "),
+
+
+            )
+                                .arg(
+
+            Arg::new("ipfs_path")
+                .long("ipfs_path")
+                .num_args(1..)
+                .default_value("10")
+                .help("ipfs o listen to"),
+
+
+            )
+
+
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

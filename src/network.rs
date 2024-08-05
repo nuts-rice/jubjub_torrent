@@ -55,7 +55,9 @@ pub(crate) async fn new(
     let identity = identity::Keypair::generate_ed25519();
     let peer_id = identity.public().to_peer_id();
     let mut metric_registry = Registry::default();
-    let (tcp_addr, workers, download_dir) = {
+    let (
+        //ipfs_path, ipfs_addr, ipfs_workers, 
+        tcp_addr, workers, download_dir) = {
         let config_guard = config.read().unwrap();
         (
             config_guard.tcp.address,
