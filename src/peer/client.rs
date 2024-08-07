@@ -1,6 +1,5 @@
 use crate::client::arguments::ClientCommand;
 use crate::peer::error::ClientError;
-use crate::types::InfoHash;
 use crate::types::Node;
 use crate::types::Torrent;
 use ::futures::SinkExt;

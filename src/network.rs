@@ -56,8 +56,11 @@ pub(crate) async fn new(
     let peer_id = identity.public().to_peer_id();
     let mut metric_registry = Registry::default();
     let (
-        //ipfs_path, ipfs_addr, ipfs_workers, 
-        tcp_addr, workers, download_dir) = {
+        //ipfs_path, ipfs_addr, ipfs_workers,
+        tcp_addr,
+        workers,
+        download_dir,
+    ) = {
         let config_guard = config.read().unwrap();
         (
             config_guard.tcp.address,
@@ -343,7 +346,9 @@ impl Session {
     // unimplemented!()
     // match command {}
 }
-async fn fetch_providers() -> Result<ProviderResult, ProviderError> {}
+async fn fetch_providers() -> Result<ProviderResult, NetworkError> {
+    todo!()
+}
 
 //override provider result
 #[derive(Debug, Clone)]

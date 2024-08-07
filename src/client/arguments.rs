@@ -2,10 +2,9 @@ use clap::{ArgMatches, Command, Parser, ValueEnum};
 use futures::channel::oneshot;
 use libp2p::core::Multiaddr;
 use libp2p::PeerId;
-use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::net::SocketAddr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(version, author, about)]
@@ -71,11 +70,23 @@ impl Default for MetricsSettings {
     }
 }
 
+impl Default for IPFSSettings {
+    fn default() -> Self {
+        Self {
+            address: ("/ipfs/".parse::<Multiaddr>().unwrap()),
+            path: ("/ip4".to_string()),
+            timeout: 10,
+            socket_workers: 1,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Settings {
     pub tcp: TcpSettings,
     pub ws: WSSettings,
     pub metrics: MetricsSettings,
+    pub ipfs: IPFSSettings,
     pub max_peers: usize,
     pub download_dir: PathBuf,
 }
@@ -86,6 +97,7 @@ impl Default for Settings {
             tcp: TcpSettings::default(),
             ws: WSSettings::default(),
             metrics: MetricsSettings::default(),
+            ipfs: IPFSSettings::default(),
             max_peers: 10,
             download_dir: "~/Downloads".parse::<PathBuf>().unwrap(),
         }
@@ -173,15 +185,12 @@ impl Settings {
                 .unwrap()
                 .parse::<SocketAddr>()
                 .unwrap(),
-                            
 
             socket_workers: ws_table
                 .get("socket_workers")
                 .expect("Missing socket_workers field")
                 .as_integer()
-                .expect("Invalid socket_workers field") as usize
-
-
+                .expect("Invalid socket_workers field") as usize,
         };
         let ipfs_table = parsed
             .get("ipfs")
@@ -212,7 +221,7 @@ impl Settings {
                 .expect("Missing timeout field")
                 .as_integer()
                 .expect("Invalid timeout field") as u64,
-               }; 
+        };
         let metrics_table = parsed
             .get("metrics")
             .expect("Missing metrics field")
@@ -226,20 +235,19 @@ impl Settings {
                 .unwrap()
                 .parse::<SocketAddr>()
                 .unwrap(),
-                            
+
             route: metrics_table
                 .get("route")
                 .expect("Missing route field")
                 .as_str()
                 .expect("Invalid route field")
                 .to_string(),
-                            
+
             update_interval: metrics_table
                 .get("update_interval")
                 .expect("Missing update_interval field")
                 .as_integer()
-                .unwrap() as u64
-                        
+                .unwrap() as u64,
         };
         let max_peers = jubjub_table
             .get("max_peers")
@@ -250,6 +258,7 @@ impl Settings {
             tcp,
             ws,
             metrics,
+            ipfs,
             max_peers,
             download_dir,
         }
@@ -276,8 +285,8 @@ impl Settings {
         let ws = WSSettings {
             address,
             socket_workers: 1,
-
         };
+
         let enabled = matches.get_occurrences::<String>("metrics").is_some();
         let metrics = if enabled {
             let address = matches
@@ -303,6 +312,37 @@ impl Settings {
                 update_interval: 10,
             }
         };
+        let ipfs_enabled = matches.get_occurrences::<String>("ipfs").is_some();
+        let ipfs = if ipfs_enabled {
+            let address = matches
+                .get_one::<String>("ipfs_address")
+                .expect("Invalid ipfs_address");
+            let timeout = matches
+                .get_one::<String>("timeout")
+                .expect("Invalid timeout")
+                .parse::<u64>()
+                .expect("Invalid timeout");
+            let path = matches.get_one::<String>("path").expect("Invalid path");
+            let socket_workers = matches
+                .get_one::<String>("socket_workers")
+                .expect("Invalid socket_workers")
+                .parse::<usize>()
+                .expect("Invalid socket_workers");
+            IPFSSettings {
+                address: address.parse::<Multiaddr>().expect("Invalid ipfs address"),
+                socket_workers,
+                path: path.to_string(),
+                timeout,
+            }
+        } else {
+            IPFSSettings {
+                address: "/ip4/".parse::<Multiaddr>().unwrap(),
+
+                socket_workers: 04,
+                path: "/ipfs/".to_string(),
+                timeout: 10,
+            }
+        };
         let max_peers = matches
             .get_one::<String>("max_peers")
             .expect("Invalid max_peers")
@@ -317,6 +357,7 @@ impl Settings {
         Settings {
             tcp,
             ws,
+            ipfs,
             metrics,
             max_peers,
             download_dir,
@@ -460,43 +501,31 @@ pub fn get_cmds() -> clap::Command {
                 .num_args(1..)
                 .default_value("10")
                 .help("ipfs address to listen to"),
-                )
-     
-                .arg(
-
-            Arg::new("ipfs_address")
-                .long("ipfs_address")
+        )
+        .arg(
+            Arg::new("ipfs_timeout")
+                .long("ipfs_timeout")
                 .num_args(1..)
                 .default_value("10")
-                .help("ipfs address to listen to"),
-
-
-            )
-                                .arg(
-
+                .help("ipfs timeout in seconds "),
+        )
+        .arg(
             Arg::new("ipfs_socket_worker")
                 .long("ipfs_socket_worker")
                 .num_args(1..)
                 .default_value("10")
                 .help("number of ipfs socket workers "),
-
-
-            )
-                                .arg(
-
+        )
+        .arg(
             Arg::new("ipfs_path")
                 .long("ipfs_path")
                 .num_args(1..)
                 .default_value("10")
                 .help("ipfs o listen to"),
-
-
-            )
-
-
+        )
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct FileRequest(String);
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct FileResponse(Vec<u8>);
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// struct FileRequest(String);
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// pub(crate) struct FileResponse(Vec<u8>);
