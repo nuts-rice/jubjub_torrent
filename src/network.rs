@@ -361,8 +361,11 @@ pub enum ProviderResult {
         closest_peers: Vec<PeerId>,
     },
 }
+//TODO: collect downloaded pieces, spawn this as a thread , use a channel
+async fn handle_provider() {}
 
-fn provider_result() {}
+//TODO: serves pieces to download, spawn this as a thread , use a channel
+async fn serve_request() {}
 
 pub(crate) async fn metrics_server(_registry: Registry) -> Result<(), std::io::Error> {
     unimplemented!()

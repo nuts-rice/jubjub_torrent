@@ -73,7 +73,7 @@ impl Default for MetricsSettings {
 impl Default for IPFSSettings {
     fn default() -> Self {
         Self {
-            address: ("/ipfs/".parse::<Multiaddr>().unwrap()),
+            address: ("/ip4/127.0.0.1".parse::<Multiaddr>().unwrap()),
             path: ("/ip4".to_string()),
             timeout: 10,
             socket_workers: 1,
@@ -192,35 +192,41 @@ impl Settings {
                 .as_integer()
                 .expect("Invalid socket_workers field") as usize,
         };
-        let ipfs_table = parsed
-            .get("ipfs")
-            .expect("Missing ipfs field")
-            .as_table()
-            .expect("Invalid ipfs field");
+        // let ipfs_table = parsed
+        //     .get("ipfs")
+        //     .expect("Missing ipfs field")
+        //     .as_table()
+        //     .expect("Invalid ipfs field");
+        // let ipfs = IPFSSettings {
+        //     address: ipfs_table
+        //         .get("address")
+        //         .expect("Missing address field")
+        //         .as_str()
+        //         .unwrap()
+        //         .parse::<Multiaddr>()
+        //         .unwrap(),
+        //     socket_workers: ipfs_table
+        //         .get("socket_workers")
+        //         .expect("Missing socket_workers field")
+        //         .as_integer()
+        //         .expect("Invalid socket_workers field") as usize,
+        //     path: ipfs_table
+        //         .get("path")
+        //         .expect("Missing path field")
+        //         .as_str()
+        //         .unwrap()
+        //         .to_string(),
+        //     timeout: ipfs_table
+        //         .get("timeout")
+        //         .expect("Missing timeout field")
+        //         .as_integer()
+        //         .expect("Invalid timeout field") as u64,
+        // };
         let ipfs = IPFSSettings {
-            address: ipfs_table
-                .get("address")
-                .expect("Missing address field")
-                .as_str()
-                .unwrap()
-                .parse::<Multiaddr>()
-                .unwrap(),
-            socket_workers: ipfs_table
-                .get("socket_workers")
-                .expect("Missing socket_workers field")
-                .as_integer()
-                .expect("Invalid socket_workers field") as usize,
-            path: ipfs_table
-                .get("path")
-                .expect("Missing path field")
-                .as_str()
-                .unwrap()
-                .to_string(),
-            timeout: ipfs_table
-                .get("timeout")
-                .expect("Missing timeout field")
-                .as_integer()
-                .expect("Invalid timeout field") as u64,
+            path: "/ipfs/".to_string(),
+            address: "/ip4/127.0.0.1".parse::<Multiaddr>().unwrap(),
+            timeout: 10,
+            socket_workers: 04,
         };
         let metrics_table = parsed
             .get("metrics")
@@ -313,35 +319,40 @@ impl Settings {
             }
         };
         let ipfs_enabled = matches.get_occurrences::<String>("ipfs").is_some();
-        let ipfs = if ipfs_enabled {
-            let address = matches
-                .get_one::<String>("ipfs_address")
-                .expect("Invalid ipfs_address");
-            let timeout = matches
-                .get_one::<String>("timeout")
-                .expect("Invalid timeout")
-                .parse::<u64>()
-                .expect("Invalid timeout");
-            let path = matches.get_one::<String>("path").expect("Invalid path");
-            let socket_workers = matches
-                .get_one::<String>("socket_workers")
-                .expect("Invalid socket_workers")
-                .parse::<usize>()
-                .expect("Invalid socket_workers");
-            IPFSSettings {
-                address: address.parse::<Multiaddr>().expect("Invalid ipfs address"),
-                socket_workers,
-                path: path.to_string(),
-                timeout,
-            }
-        } else {
-            IPFSSettings {
-                address: "/ip4/".parse::<Multiaddr>().unwrap(),
+        // let ipfs = if ipfs_enabled {
+        //     let address = matches
+        //         .get_one::<String>("ipfs_address")
+        //         .expect("Invalid ipfs_address");
+        //     let timeout = matches
+        //         .get_one::<String>("timeout")
+        //         .expect("Invalid timeout")
+        //         .parse::<u64>()
+        //         .expect("Invalid timeout");
+        //     let path = matches.get_one::<String>("path").expect("Invalid path");
+        //     let socket_workers = matches
+        //         .get_one::<String>("socket_workers")
+        //         .expect("Invalid socket_workers")
+        //         .parse::<usize>()
+        //         .expect("Invalid socket_workers");
+        //     let timeout = matches
+        //         .get_one::<String>("timeout")
+        //         .expect("Invalid timeout")
+        //         .parse::<u64>()
+        //         .expect("Invalid timeout");
+        //     IPFSSettings {
+        //         address: address.parse::<Multiaddr>().expect("Invalid ipfs address"),
+        //         socket_workers,
+        //         path: path.to_string(),
+        //         timeout,
+        //     }
+        // } else {
+        let ipfs = IPFSSettings {
+            address: "/ip4/".parse::<Multiaddr>().unwrap(),
 
-                socket_workers: 04,
-                path: "/ipfs/".to_string(),
-                timeout: 10,
-            }
+            socket_workers: 04,
+            path: "/ipfs/".to_string(),
+            timeout: 10,
+            // }
         };
         let max_peers = matches
             .get_one::<String>("max_peers")

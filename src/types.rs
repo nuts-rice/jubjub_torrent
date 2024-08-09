@@ -219,7 +219,7 @@ fn unpack<'a, T: Deserialize<'a>>(bytes: &'a [u8]) -> Result<T, Box<dyn Error>> 
 pub enum ChannelRequest {}
 
 mod tests {
-    use super::*;
+    
     #[tokio::test]
     async fn test_bincode_serialize() {
         let buffer = [0u8; 20];

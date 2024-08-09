@@ -12,4 +12,9 @@ socket_workers = 1
 address = "127.0.0.1:9091"
 route = "/metrics"
 update_interval = 5
+[ipfs]
+address = ""
+path="usr/local/bin/ipfs"
+timeout= 10
+socket_workers = 1
 
