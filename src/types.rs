@@ -5,6 +5,7 @@ use libp2p::{request_response::ResponseChannel, PeerId};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, error::Error, path::PathBuf};
+use strum::Display;
 
 use crate::client::arguments::ClientCommand;
 
@@ -21,10 +22,13 @@ pub(crate) enum Event {
 
 pub type SessionId = u32;
 
+pub type PeerMap = hashbrown::HashMap<PeerId, SessionId>;
+
+#[derive(Debug)]
 pub struct Torrent {
     announce: Option<String>,
     pub info_hash: InfoHash,
-    peers: hashbrown::HashMap<PeerId, SessionId>,
+    peers: PeerMap,
     cmd_rx: futures::channel::mpsc::Receiver<ClientCommand>,
     listen_addr: libp2p::Multiaddr,
     started: Option<std::time::Instant>,
@@ -81,6 +85,9 @@ pub enum FileStatus {
 #[derive(Deserialize, Serialize)]
 pub struct File {
     pub header: RequestHeader,
+    pub id: String,
+    pub seeders: u32,
+    pub leechers: u32,
     pub announce: Option<String>,
     pub info_hash: InfoHash,
     pub piece_hash: Vec<u8>,
@@ -93,16 +100,22 @@ pub struct File {
 impl File {
     pub fn new(
         announce: Option<String>,
+        id: String,
+        seeders: u32,
+        leechers: u32,
         info_hash: InfoHash,
         piece_hash: Vec<u8>,
         piece_length: u64,
         length: usize,
         name: String,
-        request_header: RequestHeader,
+        header: RequestHeader,
         destination: Option<PathBuf>,
     ) -> Self {
         Self {
-            header: request_header,
+            header,
+            id,
+            seeders,
+            leechers,
             announce,
             info_hash,
             piece_hash,
@@ -202,24 +215,27 @@ impl std::fmt::Display for InfoHash {
     }
 }
 
-fn pack<T: Serialize, W: std::io::Write>(w: &mut W, t: &T) -> Result<(), ()> {
+pub fn pack<T: Serialize, W: std::io::Write>(w: &mut W, t: &T) -> Result<Vec<u8>, ()> {
     let bytes = serde_bencode::to_bytes(t).unwrap();
     match w.write_all(&bytes) {
-        Ok(_) => Ok(()),
+        Ok(_) => Ok(bytes),
         Err(_) => Err(()),
     }
 }
 
-fn unpack<'a, T: Deserialize<'a>>(bytes: &'a [u8]) -> Result<T, Box<dyn Error>> {
+pub fn unpack<'a, T: Deserialize<'a>>(bytes: &'a [u8]) -> Result<T, Box<dyn Error>> {
     let t = serde_bencode::from_bytes::<T>(bytes)?;
     Ok(t)
 }
+
+#[derive(Serialize, Deserialize, Display)]
+pub enum Sources {}
 
 #[derive(Debug)]
 pub enum ChannelRequest {}
 
 mod tests {
-    
+
     #[tokio::test]
     async fn test_bincode_serialize() {
         let buffer = [0u8; 20];

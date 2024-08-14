@@ -1,19 +1,31 @@
 use crate::client::arguments::ClientCommand;
 use crate::peer::error::ClientError;
+use crate::types;
 use crate::types::Node;
 use crate::types::Torrent;
 use ::futures::SinkExt;
 use libp2p::futures::channel::{mpsc, oneshot};
 use libp2p::Multiaddr;
 use libp2p::PeerId;
+use serde::{Deserialize, Serialize};
 use serde_bencode as bencode;
 use serde_json as json;
-
 use std::path::PathBuf;
 use std::str::FromStr;
+use strum::{Display, VariantArray};
 #[derive(Clone)]
 pub struct Client {
     pub tx: mpsc::Sender<ClientCommand>,
+    pub mode: ClientMode,
+}
+
+#[derive(Display, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, VariantArray)]
+pub enum ClientMode {
+    Qbit = 0,
+    Transmission = 1,
+    Deluge = 2,
+    Download = 3,
+    Cmd = 4,
 }
 
 #[repr(C)]
@@ -70,6 +82,7 @@ impl Client {
     // pub async fn new(seed: Option<u8>) -> Result<(Client, impl Stream<Item = Event> ,Session), Box<dyn Error>> {
     //     unimplemented!()
     // }
+
     pub(crate) async fn start_listening(
         &mut self,
         addr: Multiaddr,
@@ -157,8 +170,12 @@ impl Client {
         (res, serialized)
     }
 
-    pub fn decode_file(_file: PathBuf) -> (Torrent, String) {
-        unimplemented!()
+    pub fn decode_file(file: PathBuf) -> (types::RequestHeader, String) {
+        use crate::types;
+        let file = std::fs::read_to_string(file).unwrap();
+        let bytes: Vec<u8> = file.bytes().collect();
+        
+        types::unpack(&bytes).unwrap()
         // let file = std::fs::read_to_string(file)?;
         // let file = bencode::from_str(&file)?;
         // Ok(file)

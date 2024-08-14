@@ -6,6 +6,7 @@ use libp2p::Multiaddr;
 use crate::client::arguments::ClientCommand;
 use crate::client::arguments::Settings;
 use crate::metrics::MetricServer;
+use crate::peer::client::ClientMode;
 use crate::types;
 use crate::types::Event;
 use crate::{
@@ -51,6 +52,7 @@ pub enum NetworkError {
 pub(crate) async fn new(
     config: Arc<RwLock<Settings>>,
     metrics: MetricServer,
+    mode: ClientMode,
 ) -> Result<(Client, impl Stream<Item = Event>, Session), Box<dyn Error>> {
     let identity = identity::Keypair::generate_ed25519();
     let peer_id = identity.public().to_peer_id();
@@ -102,7 +104,10 @@ pub(crate) async fn new(
     let (command_tx, command_rx) = mpsc::channel(0);
     let (event_tx, event_rx) = mpsc::channel(0);
     Ok((
-        Client { tx: command_tx },
+        Client {
+            tx: command_tx,
+            mode,
+        },
         event_rx,
         Session::new(swarm, metrics, command_rx, event_tx),
     ))
