@@ -11,16 +11,18 @@ use crate::client::arguments::{get_cmds, Settings};
 use eframe::egui;
 use libp2p::metrics::Registry;
 use metrics::{setup_tracing, MetricServer};
+use network::Session;
+use peer::client::ClientMode;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
-use types::TorrentRequest;
 
 pub struct App {
     torrents: Vec<String>,
     config: Arc<RwLock<Settings>>,
     torrent_files: Vec<egui::DroppedFile>,
     torrent_file_path: Option<String>,
-    requested_torrent: Option<TorrentRequest>,
+    session_id: u32,
+    session: Option<Session>,
 }
 
 impl Default for App {
@@ -30,7 +32,8 @@ impl Default for App {
             torrent_files: vec![],
             torrent_file_path: None,
             config: Arc::new(RwLock::new(Settings::default())),
-            requested_torrent: None,
+            session_id: 0,
+            session: None,
         }
     }
 }
@@ -80,7 +83,7 @@ impl eframe::App for App {
                 });
             }
         });
-        preview_files(ctx);
+        // preview_files(ctx);
         ctx.input(|i| {
             if !i.raw.dropped_files.is_empty() {
                 self.torrent_files.clone_from(&i.raw.dropped_files);
@@ -129,13 +132,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let metrics_registry = Registry::default();
     let registry_rwlock = Arc::new(RwLock::new(metrics_registry));
     let metrics = MetricServer::new(registry_rwlock.clone(), config_rwlock.clone());
-    let clientMode = peer::client::ClientMode::Download;
-    //moved to network
-    let (_network_client, _network_events, network_session) =
-        network::new(config_rwlock.clone(), metrics.clone(), clientMode)
-            .await
-            .unwrap();
+    dotenv::dotenv().ok();
+    let key = dotenv::var("SECRET_KEY").unwrap();
+
+    let (_network_client, _network_events, network_session) = network::new(
+        config_rwlock.clone(),
+        metrics.clone(),
+        ClientMode::Download,
+        Some(key.parse::<u8>().unwrap()),
+    )
+    .await
+    .unwrap();
     tokio::spawn(network_session.run());
+
+    //moved to network
     setup_tracing();
     tokio::spawn(metrics::metrics_server(metrics));
     let options = eframe::NativeOptions {

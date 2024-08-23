@@ -174,7 +174,7 @@ impl Client {
         use crate::types;
         let file = std::fs::read_to_string(file).unwrap();
         let bytes: Vec<u8> = file.bytes().collect();
-        
+
         types::unpack(&bytes).unwrap()
         // let file = std::fs::read_to_string(file)?;
         // let file = bencode::from_str(&file)?;

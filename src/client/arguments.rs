@@ -89,6 +89,7 @@ pub struct Settings {
     pub ipfs: IPFSSettings,
     pub max_peers: usize,
     pub download_dir: PathBuf,
+    secret_key: Option<u8>,
 }
 
 impl Default for Settings {
@@ -100,6 +101,7 @@ impl Default for Settings {
             ipfs: IPFSSettings::default(),
             max_peers: 10,
             download_dir: "~/Downloads".parse::<PathBuf>().unwrap(),
+            secret_key: None,
         }
     }
 }
@@ -136,6 +138,13 @@ impl Settings {
             .expect("Missing address field")
             .as_str()
             .expect("Invalid address field");
+        let secret_key = jubjub_table
+            .get("key")
+            .expect("Missing key field")
+            .as_str()
+            .expect("Invalid download_dir field")
+            .parse::<u8>()
+            .unwrap();
         let download_dir = jubjub_table
             .get("download_dir")
             .expect("Missing download_dir field")
@@ -267,6 +276,7 @@ impl Settings {
             ipfs,
             max_peers,
             download_dir,
+            secret_key: Some(secret_key),
         }
     }
 
@@ -364,6 +374,11 @@ impl Settings {
             .expect("Invalid download dir")
             .parse::<PathBuf>()
             .expect("Invalid download dir");
+        let secret_key = matches
+            .get_one::<String>("key>")
+            .expect("Invalid secret key")
+            .parse::<u8>()
+            .expect("Invalid secret key");
 
         Settings {
             tcp,
@@ -372,6 +387,7 @@ impl Settings {
             metrics,
             max_peers,
             download_dir,
+            secret_key: Some(secret_key),
         }
     }
 }
@@ -439,6 +455,12 @@ pub fn get_cmds() -> clap::Command {
                 .help("Maximum number of peers to connect to")
                 .default_value("10")
                 .conflicts_with("config"),
+        )
+        .arg(
+            Arg::new("key")
+                .short('k')
+                .long("key")
+                .help("Secret key for encryption"),
         )
         .arg(
             Arg::new("config")
@@ -532,7 +554,7 @@ pub fn get_cmds() -> clap::Command {
                 .long("ipfs_path")
                 .num_args(1..)
                 .default_value("10")
-                .help("ipfs o listen to"),
+                .help("ipfs path to listen to"),
         )
 }
 

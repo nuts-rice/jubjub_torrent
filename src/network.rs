@@ -53,9 +53,17 @@ pub(crate) async fn new(
     config: Arc<RwLock<Settings>>,
     metrics: MetricServer,
     mode: ClientMode,
+    secret_key: Option<u8>,
 ) -> Result<(Client, impl Stream<Item = Event>, Session), Box<dyn Error>> {
-    let identity = identity::Keypair::generate_ed25519();
-    let peer_id = identity.public().to_peer_id();
+    let keys = match secret_key {
+        Some(seed) => {
+            let mut bytes = [0u8; 32];
+            bytes[0] = seed;
+            identity::Keypair::ed25519_from_bytes(bytes).unwrap()
+        }
+        None => identity::Keypair::generate_ed25519(),
+    };
+    let peer_id = keys.public().to_peer_id();
     let mut metric_registry = Registry::default();
     let (
         //ipfs_path, ipfs_addr, ipfs_workers,
@@ -70,13 +78,9 @@ pub(crate) async fn new(
             config_guard.download_dir.clone(),
         )
     };
-    info!(
-        "Peer id: {:?}. Public key: {:?}",
-        peer_id,
-        identity.public()
-    );
+    info!("Peer id: {:?}. Public key: {:?}", peer_id, keys.public());
     // parser::chi_squared_test(&_bytes, &bytes);
-    let mut swarm = SwarmBuilder::with_existing_identity(identity)
+    let mut swarm = SwarmBuilder::with_existing_identity(keys)
         .with_tokio()
         .with_tcp(
             tcp::Config::default(),
@@ -101,8 +105,8 @@ pub(crate) async fn new(
         .parse()
         .unwrap();
     swarm.listen_on(address)?;
-    let (command_tx, command_rx) = mpsc::channel(0);
-    let (event_tx, event_rx) = mpsc::channel(0);
+    let (command_tx, command_rx) = mpsc::channel(32);
+    let (event_tx, event_rx) = mpsc::channel(32);
     Ok((
         Client {
             tx: command_tx,
@@ -133,7 +137,7 @@ pub(crate) struct Session {
 }
 
 impl Session {
-    fn new(
+    pub fn new(
         swarm: Swarm<Behaviour>,
         metrics: MetricServer,
         command_rx: mpsc::Receiver<ClientCommand>,
