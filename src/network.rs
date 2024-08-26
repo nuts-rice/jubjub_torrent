@@ -73,7 +73,7 @@ pub(crate) async fn new(
     ) = {
         let config_guard = config.read().unwrap();
         (
-            config_guard.tcp.address,
+            config_guard.tcp.address.clone(),
             config_guard.tcp.socket_workers,
             config_guard.download_dir.clone(),
         )
@@ -101,10 +101,14 @@ pub(crate) async fn new(
         })?
         .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(30)))
         .build();
-    let address: Multiaddr = (format!("/ip4/{}/tcp/{}", tcp_addr.ip(), tcp_addr.port()))
-        .parse()
-        .unwrap();
-    swarm.listen_on(address)?;
+    swarm
+        .behaviour_mut()
+        .kademlia
+        .set_mode(Some(kad::Mode::Server));
+    // let address: Multiaddr = (format!("/ip4/{}/tcp/{}", tcp_addr.ip(), tcp_addr.port()))
+    //     .parse()
+    //     .unwrap();
+    // swarm.listen_on(address)?;
     let (command_tx, command_rx) = mpsc::channel(32);
     let (event_tx, event_rx) = mpsc::channel(32);
     Ok((
@@ -159,8 +163,11 @@ impl Session {
     pub(crate) async fn run(mut self) {
         loop {
             tokio::select! {
-                Some(command) = self.command_rx.next() => self.handle_command(command).await,
                 event = self.swarm.select_next_some() => self.handle_event(event).await,
+                command = self.command_rx.next() => match command {
+                    Some(command) => self.handle_command(command).await,
+                    None => return,
+                }
             }
         }
     }
@@ -396,15 +403,18 @@ mod tests {
         let config_rwlock = create_mock_config().await;
         let registry_rwlock = Arc::new(RwLock::new(Registry::default()));
         let metrics = MetricServer::new(registry_rwlock, config_rwlock.clone());
-        let (mut network_client, network_events, network_session) =
-            new(config_rwlock.clone(), metrics).await.unwrap();
-        let address = config_rwlock.read().unwrap().tcp.address;
-        let addr = format!("/ip4/{}/tcp/{}", address.ip(), address.port())
-            .parse::<Multiaddr>()
-            .unwrap();
+        let (mut network_client, network_events, network_session) = new(
+            config_rwlock.clone(),
+            metrics,
+            ClientMode::Download,
+            Some(0u8),
+        )
+        .await
+        .unwrap();
+        let address = config_rwlock.read().unwrap().tcp.address.clone();
         let (tx, rx) = oneshot::channel();
         tokio::spawn(network_session.run());
-        let command = ClientCommand::ListenCommand { addr, tx };
+        let command = ClientCommand::ListenCommand { addr: address, tx };
         network_client.tx.send(command).await.unwrap();
         let result = rx.await.unwrap();
         info!("{:?}", result);

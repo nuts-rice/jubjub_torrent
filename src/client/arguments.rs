@@ -19,7 +19,7 @@ pub struct Args {
 }
 #[derive(Debug, Clone)]
 pub struct TcpSettings {
-    pub address: SocketAddr,
+    pub address: Multiaddr,
     pub socket_workers: usize,
 }
 
@@ -33,12 +33,12 @@ pub struct IPFSSettings {
 
 #[derive(Debug, Clone)]
 pub struct WSSettings {
-    pub address: SocketAddr,
+    pub address: Multiaddr,
     pub socket_workers: usize,
 }
 #[derive(Debug, Clone)]
 pub struct MetricsSettings {
-    pub address: SocketAddr,
+    pub socket_addr: SocketAddr,
     pub route: String,
     pub update_interval: u64,
 }
@@ -46,7 +46,7 @@ pub struct MetricsSettings {
 impl Default for TcpSettings {
     fn default() -> Self {
         Self {
-            address: "127.0.0.1:3001".parse::<SocketAddr>().unwrap(),
+            address: "/ip4/127.0.0.1:3001".parse::<Multiaddr>().unwrap(),
             socket_workers: 1,
         }
     }
@@ -54,7 +54,7 @@ impl Default for TcpSettings {
 impl Default for WSSettings {
     fn default() -> Self {
         Self {
-            address: ("127.0.0.1:3000".parse::<SocketAddr>().unwrap()),
+            address: ("/ip4/127.0.0.1:3000".parse::<Multiaddr>().unwrap()),
             socket_workers: 1,
         }
     }
@@ -63,7 +63,7 @@ impl Default for WSSettings {
 impl Default for MetricsSettings {
     fn default() -> Self {
         Self {
-            address: ("127.0.0.1:9091".parse::<SocketAddr>().unwrap()),
+            socket_addr: ("127.0.0.1:9091".parse::<SocketAddr>().unwrap()),
             route: ("/metrics".to_string()),
             update_interval: 5,
         }
@@ -178,7 +178,7 @@ impl Settings {
                 .expect("Missing address field")
                 .as_str()
                 .unwrap()
-                .parse::<SocketAddr>()
+                .parse::<Multiaddr>()
                 .unwrap(),
             socket_workers: tcp_table
                 .get("socket_workers")
@@ -192,7 +192,7 @@ impl Settings {
                 .expect("Missing address field")
                 .as_str()
                 .unwrap()
-                .parse::<SocketAddr>()
+                .parse::<Multiaddr>()
                 .unwrap(),
 
             socket_workers: ws_table
@@ -243,7 +243,7 @@ impl Settings {
             .as_table()
             .expect("Invalid metrics field");
         let metrics = MetricsSettings {
-            address: metrics_table
+            socket_addr: metrics_table
                 .get("address")
                 .expect("Missing address field")
                 .as_str()
@@ -292,10 +292,10 @@ impl Settings {
         };
 
         let address = address
-            .parse::<SocketAddr>()
+            .parse::<Multiaddr>()
             .expect("Invalid address or port!");
         let tcp = TcpSettings {
-            address,
+            address: address.clone(),
             socket_workers: 1,
         };
         let ws = WSSettings {
@@ -315,7 +315,7 @@ impl Settings {
                 .expect("Invalid update_interval");
             let route = matches.get_one::<String>("route").expect("Invalid route");
             MetricsSettings {
-                address: address
+                socket_addr: address
                     .parse::<SocketAddr>()
                     .expect("Invalid metrics address"),
                 route: route.to_string(),
@@ -324,7 +324,7 @@ impl Settings {
         } else {
             MetricsSettings {
                 route: "/metrics".to_string(),
-                address: "::1:9091".parse::<SocketAddr>().unwrap(),
+                socket_addr: "::1:9091".parse::<SocketAddr>().unwrap(),
                 update_interval: 10,
             }
         };
@@ -483,7 +483,7 @@ pub fn get_cmds() -> clap::Command {
             Arg::new("tcp_address")
                 .long("tcp_address")
                 .num_args(1..)
-                .default_value("127.0.0.1:3001")
+                .default_value("/ip4/127.0.0.1:3001")
                 .help("tcp address to listen to"),
         )
         .arg(
@@ -497,7 +497,7 @@ pub fn get_cmds() -> clap::Command {
             Arg::new("ws_address")
                 .long("ws_address")
                 .num_args(1..)
-                .default_value("127.0.0.1:3002")
+                .default_value("/ip4/127.0.0.1:3002")
                 .help("ws address to listen to"),
         )
         .arg(
@@ -508,8 +508,8 @@ pub fn get_cmds() -> clap::Command {
                 .help("number of ws socket workers"),
         )
         .arg(
-            Arg::new("metrics_address")
-                .long("metrics_address")
+            Arg::new("metrics_socket_address")
+                .long("metrics_socket_address")
                 .num_args(1..)
                 .default_value("127.0.0.1:9091")
                 .help("Address to listen to for the metrics"),
@@ -532,7 +532,7 @@ pub fn get_cmds() -> clap::Command {
             Arg::new("ipfs_address")
                 .long("ipfs_address")
                 .num_args(1..)
-                .default_value("10")
+                .default_value("/ip4/127.0.0.1:5001")
                 .help("ipfs address to listen to"),
         )
         .arg(

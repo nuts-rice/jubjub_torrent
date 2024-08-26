@@ -71,7 +71,7 @@ pub(crate) async fn metrics_server(metrics: MetricServer) -> Result<(), std::io:
     let (addr, _interval, route) = {
         let config_guard = metrics.config.read().unwrap();
         (
-            config_guard.metrics.address,
+            config_guard.metrics.socket_addr,
             config_guard.metrics.update_interval,
             config_guard.metrics.route.clone(),
         )

@@ -132,10 +132,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let metrics_registry = Registry::default();
     let registry_rwlock = Arc::new(RwLock::new(metrics_registry));
     let metrics = MetricServer::new(registry_rwlock.clone(), config_rwlock.clone());
+    let (tcp_listen_address) = {
+        let config_guard = config_rwlock.read().unwrap();
+        config_guard.tcp.address.clone()
+    };
     dotenv::dotenv().ok();
     let key = dotenv::var("SECRET_KEY").unwrap();
-
-    let (_network_client, _network_events, network_session) = network::new(
+    let (mut network_client, mut network_events, network_event_loop) = network::new(
         config_rwlock.clone(),
         metrics.clone(),
         ClientMode::Download,
@@ -143,8 +146,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .await
     .unwrap();
-    tokio::spawn(network_session.run());
-
+    tokio::spawn(network_event_loop.run());
+    network_client
+        .start_listening(tcp_listen_address)
+        .await
+        .expect("Failed to  start listening");
     //moved to network
     setup_tracing();
     tokio::spawn(metrics::metrics_server(metrics));
